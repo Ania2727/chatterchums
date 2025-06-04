@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ChatterChums - User Profile{% endblock %}
+
+{% block content %}
+    <div class="profile-container">
+        <div class="user-info">
+            <div class="section-header">
+                <h1>{{ user.username }}'s Profile</h1>
+            </div>
+
+            <div class="profile-content">
+                <div class="profile-picture-container">
+                    {% if user.userprofile.profile_pic %}
+                        <img src="{{ user.userprofile.profile_pic.url }}" alt="Profile Picture" class="profile-picture">
+                    {% else %}
+                        <div class="profile-picture-placeholder">
+                            {{ user.username|first|upper }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="user-details">
+                    <p><strong>Username:</strong> {{ user.username }}</p>
+                    <p><strong>Email:</strong> {{ user.email }}</p>
+                    <p><strong>Date Joined:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
+
+                    {% if user.userprofile.bio %}
+                        <p><strong>Bio:</strong> {{ user.userprofile.bio }}</p>
+                    {% else %}
+                        <p><strong>Bio:</strong> <em>Edit profile to add biography.</em></p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="actions">
+                <a href="{% url 'users:edit_profile' %}" class="btn btn-blue">Edit Profile</a>
+                <form method="POST" action="{% url 'users:delete_profile' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger"
+                            onclick="return confirm('Are you sure you want to delete your account? This action cannot be undone.')">
+                        Delete Account
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {% if created_forums %}
+            <div class="forum-section">
+                <h3>Forums You've Created</h3>
+                <div class="forum-list">
+                    {% for forum in created_forums %}
+                        <a href="{% url 'forums:forum_detail' forum.id %}" class="forum-item">
+                            <h4>{{ forum.title }}</h4>
+                            <p>{{ forum.description|truncatechars:75 }}</p>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        {% if joined_forums %}
+            <div class="forum-section">
+                <h3>Forums You've Joined</h3>
+                <div class="forum-list">
+                    {% for forum in joined_forums %}
+                        <a href="{% url 'forums:forum_detail' forum.id %}" class="forum-item">
+                            <h4>{{ forum.title }}</h4>
+                            <p>{{ forum.description|truncatechars:75 }}</p>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="browse-forums">
+            <a href="{% url 'forums:forum_list' %}" class="btn btn-primary btn-center">Browse All Forums</a>
+        </div>
+    </div>
+{% endblock %}

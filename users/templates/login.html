@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>ChatterChums</title>
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+          rel="stylesheet">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script src="{% static 'js/dark-mode.js' %}"></script>
+</head>
+<body class="{% if request.theme == 'dark' %}dark-mode{% endif %}">
+
+<div>
+    <div class="big-logo">
+        <img src="{% static 'images/logo.png' %}" alt="Logo"/>
+        <h1>ChatterChums</h1>
+    </div>
+</div>
+
+{% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            {% if message.tags == 'error' %}
+                <div class="alert alert-error" role="alert">
+                    {{ message }}
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+{% endif %}
+
+<div>
+    <h2 class="form-title">Login</h2>
+    <p class="form-subtitle">Enter your credentials to log in</p>
+    <form method="post" class="signup-form">
+        {% csrf_token %}
+        {{ form.username }}
+        {{ form.password }}
+        <div class="remember-me">
+            <label>
+                <input type="checkbox" name="remember_me" id="remember_me"> Remember me
+            </label>
+        </div>
+        <button class="btn btn-primary" type="submit">Login</button>
+    </form>
+    <div class="separator">
+        <span>or</span>
+    </div>
+    <a href="{% url 'users:signup' %}" class="btn btn-light">Create a new account</a>
+</div>
+</body>
+</html>
