@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interest Selection</title>
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <link rel="stylesheet" href="{% static 'css/quiz.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+          rel="stylesheet">
+    <script src="{% static 'js/dark-mode.js' %}"></script>
+</head>
+<body class="{% if request.theme == 'dark' %}dark-mode{% endif %}">
+<input type="hidden" id="csrf_token" value="{{ csrf_token }}">
+
+<div class="logo">
+    <img src="{% static 'images/logo.png' %}" alt="Logo"/>
+    <span>ChatterChums</span>
+</div>
+<div class="quiz-container">
+    <h2>Select some interests:</h2>
+    <p>Find what you love</p>
+    <form id="interest-form" method="post" action="{% url 'users:save_interests' %}">
+        {% csrf_token %}
+        <div class="interests">
+            {% for tag in tags %}
+                <button type="button" class="interest-btn" data-tag-id="{{ tag.id }}">{{ tag.name }}</button>
+            {% endfor %}
+        </div>
+
+        <div id="selected-interests-container"></div>
+
+        <button type="submit" class="btn btn-primary">Continue</button>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const interestButtons = document.querySelectorAll('.interest-btn');
+        const form = document.getElementById('interest-form');
+        const selectedContainer = document.getElementById('selected-interests-container');
+
+        const selectedInterests = new Set();
+
+        interestButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const tagId = this.getAttribute('data-tag-id');
+
+                if (this.classList.contains('selected')) {
+                    this.classList.remove('selected');
+                    selectedInterests.delete(tagId);
+
+                    const input = document.querySelector(`input[name="interests"][value="${tagId}"]`);
+                    if (input) {
+                        input.remove();
+                    }
+                } else {
+                    this.classList.add('selected');
+                    selectedInterests.add(tagId);
+
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'interests';
+                    input.value = tagId;
+                    selectedContainer.appendChild(input);
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>

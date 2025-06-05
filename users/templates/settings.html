@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ChatterChums - Settings{% endblock %}
+
+{% block content %}
+    <div class="settings-container">
+        <h1>Settings</h1>
+        <div class="settings-info">
+            <h2>Appearance</h2>
+            <div class="setting-item">
+                <span>Dark Mode (Beta)</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="darkModeToggle" {% if current_theme == 'dark' %}checked{% endif %}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const darkModeToggle = document.getElementById('darkModeToggle');
+
+            if (document.body.classList.contains('dark-mode')) {
+                darkModeToggle.checked = true;
+            }
+
+            darkModeToggle.addEventListener('change', function () {
+                const theme = this.checked ? 'dark' : 'light';
+
+                if (this.checked) {
+                    document.body.classList.add('dark-mode');
+                } else {
+                    document.body.classList.remove('dark-mode');
+                }
+
+                fetch(`{% url 'users:settings' %}?theme=${theme}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                localStorage.setItem('darkMode', this.checked ? 'enabled' : 'disabled');
+            });
+        });
+    </script>
+{% endblock %}

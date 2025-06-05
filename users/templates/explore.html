@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ChatterChums - User Explore{% endblock %}
+
+
+{% block content %}
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+
+    <div class="explore-container">
+        <h1>Recommended Forums Based on Your Interests</h1>
+        <div id="recommendations"></div>
+    </div>
+
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const recommendedForums = {{ recommended_forums|safe }} || [];
+            const recommendationsDiv = document.getElementById("recommendations");
+            console.log("Recommended Forums Data:", recommendedForums);
+
+            if (recommendedForums.length === 0) {
+                recommendationsDiv.innerHTML = "<p>No forums found matching your interests.</p>";
+            } else {
+                recommendedForums.forEach(forum => {
+                    const forumElement = document.createElement("div");
+                    forumElement.classList.add("forum-card");
+                    const forumUrl = `/forums/${forum.id}/`;
+                    forumElement.innerHTML = `<h3><a href="${forumUrl}">${forum.title}</a></h3><p>${forum.description || 'No description available.'}</p>`;
+                    recommendationsDiv.appendChild(forumElement);
+                });
+            }
+        });
+    </script>
+
+    <div class="separator">
+        <span>or</span>
+    </div>
+    <a href="{% url 'forums:forum_list' %}" class="btn btn-primary btn-center">Browse All Forums</a>
+{% endblock %}
