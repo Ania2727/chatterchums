@@ -1,0 +1,201 @@
+/* Title & Subtitle */
+.form-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111;
+    margin-bottom: 5px;
+}
+
+.form-subtitle {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 20px;
+}
+
+/* Form Container Styling */
+.form-container {
+    max-width: 800px;
+    margin: 30px auto;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+/* Form Styling */
+.create-form {
+    margin-bottom: 20px;
+}
+
+.form-field {
+    margin-bottom: 15px;
+    text-align: left;
+    width: 80%;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.form-field label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #333;
+    font-size: 14px;
+}
+
+.form-info {
+    width: 80%;
+    max-width: 500px;
+    margin: 15px auto;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-left: 3px solid #af3600;
+    border-radius: 4px;
+    text-align: left;
+}
+
+.form-info p {
+    margin: 0;
+    color: #555;
+    font-size: 14px;
+}
+
+.create-form input[type="text"],
+.create-form input[type="url"],
+.create-form textarea {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 14px;
+    background-color: #f8f8f8;
+    outline: none;
+    color: #111;
+    font-family: 'Poppins', sans-serif;
+}
+
+.create-form textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* Optional field help text */
+.help-text {
+    display: block;
+    color: #666;
+    font-size: 12px;
+    margin-top: -5px;
+    margin-bottom: 10px;
+    font-style: italic;
+    line-height: 1.4;
+}
+
+/* Back link styling */
+.back-link {
+    margin-top: 15px;
+}
+
+.back-link a {
+    color: #4a6fdc;
+    text-decoration: none;
+}
+
+.back-link a:hover {
+    text-decoration: underline;
+}
+
+/* Submit Button - use buttons.css styles instead */
+.create-form .btn {
+    width: 80%;
+    max-width: 500px;
+    margin-top: 10px;
+}
+
+/* LOGIN & SIGNUP FORMS */
+/* Form input styling */
+.signup-form input[type="email"],
+.signup-form input[type="text"],
+.signup-form input[type="password"],
+.login-form input[type="text"],
+.login-form input[type="password"] {
+    display: block;
+    width: 20%;
+    padding: 12px;
+    margin: 0 auto 10px auto;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 14px;
+    background-color: #f8f8f8;
+    outline: none;
+    color: #111;
+}
+
+
+/* Form field errors */
+.errorlist {
+    color: #721c24;
+    text-align: left;
+    padding-left: 40%;
+    margin: 0 auto 5px;
+    font-size: 13px;
+    list-style-type: none;
+}
+
+.field-error {
+    margin-top: -5px;
+    margin-bottom: 10px;
+}
+
+.error-message {
+    color: #721c24;
+    font-size: 13px;
+    margin: 0;
+}
+
+/* Message styling - for Login Errors */
+.messages {
+    width: 80%;
+    max-width: 500px;
+    margin: 10px auto;
+    padding: 0;
+    list-style-type: none;
+}
+
+.alert {
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: left;
+}
+
+.alert-error, .alert-danger {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.alert-warning {
+    color: #856404;
+    background-color: #fff3cd;
+    border-color: #ffeeba;
+}
+
+.alert-info {
+    color: #0c5460;
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+}

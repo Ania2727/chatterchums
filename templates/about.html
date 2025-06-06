@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ChatterChums - About{% endblock %}
+
+{% block content %}
+<div>
+    <div class="big-logo">
+        <img src="{% static 'images/logo.png' %}" alt="Logo"/>
+        <h1>ChatterChums</h1>
+    </div>
+</div>
+<div>
+    <h2>Why ChatterChums?</h2>
+
+    <div style="height: 20px;"></div>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <h3>Join Communities</h3>
+            <p>Find forums about topics you're interested in and join the conversation.</p>
+        </div>
+
+        <div class="feature-card">
+            <h3>Create Your Own Forums</h3>
+            <p>Start discussions about topics you're passionate about and build your community.</p>
+        </div>
+
+        <div class="feature-card">
+            <h3>Connect with Others</h3>
+            <p>Meet people who share your interests and engage in meaningful conversations.</p>
+        </div>
+    </div>
+</div>
+{%endblock%}

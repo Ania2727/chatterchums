@@ -1,0 +1,133 @@
+/* Base Button Style */
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 25px;
+    font-size: 16px;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+    font-weight: normal;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Button Colors */
+.btn-primary {
+    background-color: #ff914d;
+    color: #fff;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: #ff7b2c;
+}
+
+.btn-secondary {
+    background-color: #d3d3d3;
+    color: #333;
+    border: none;
+}
+
+.btn-secondary:hover {
+    background-color: #c0c0c0;
+}
+
+.btn-blue {
+    background-color: #4a6fdc;
+    color: white;
+    border: none;
+}
+
+.btn-blue:hover {
+    background-color: #3a5dc7;
+}
+
+.btn-danger {
+    background-color: #dc4a4a;
+    color: white;
+    border: none;
+}
+
+.btn-danger:hover {
+    background-color: #c73a3a;
+}
+
+.btn-light {
+    background-color: #f8f9fa;
+    color: #666;
+    border: 1px solid #dee2e6;
+}
+
+.btn-light:hover {
+    background-color: #e9ecef;
+}
+
+/* Button Sizes */
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 14px;
+}
+
+.btn-lg {
+    padding: 12px 24px;
+    font-size: 18px;
+}
+
+/* Button Layout Modifiers */
+.btn-block {
+    display: block;
+    width: 100%;
+}
+
+.btn-center {
+    margin: 0 auto;
+    justify-content: center;
+}
+
+.btn-right {
+    justify-content: right;
+}
+
+/* Text Button (No Background) */
+.btn-text {
+    background: none;
+    border: none;
+    box-shadow: none;
+    color: #4a6fdc;
+    padding: 0;
+    text-decoration: underline;
+}
+
+.btn-text:hover {
+    color: #3a5dc7;
+    text-decoration: underline;
+}
+
+/* Ensures form buttons match link buttons */
+button.btn,
+input[type="submit"].btn,
+input[type="button"].btn {
+    height: auto;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .btn-mobile-block {
+        display: block;
+        width: 80%;
+        margin: 0 auto;
+    }
+
+    .btn + .btn {
+        margin-top: 10px;
+    }
+}

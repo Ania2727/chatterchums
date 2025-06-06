@@ -1,0 +1,55 @@
+/* Settings Page Styles - Matching Profile Style */
+.settings-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    text-align: left;
+}
+
+.settings-info {
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.welcome-message {
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+
+h2.appearance-title {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #000000;
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    padding: 5px;
+    text-align: left;
+}
+
+.setting-item span {
+    font-size: 16px;
+    color: #333;
+}
+
+.actions {
+    margin-top: 30px;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .settings-container {
+        width: 90%;
+        padding: 15px;
+    }
+
+    .user-info {
+        padding: 15px;
+    }
+}

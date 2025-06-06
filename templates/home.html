@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ChatterChums - Connect and Chat{% endblock %}
+
+{% block content %}
+        <div class="hero-section">
+                <h1>Welcome to ChatterChums</h1>
+                <p class="hero-subtitle">Join conversations, create communities, and connect with others</p>
+
+                {% if user.is_authenticated %}
+                <div class="buttons">
+                    <a href="{% url 'forums:forum_list' %}" ><button class="btn btn-primary">Browse Forums</button></a>
+                    <a href="{% url 'forums:add_forum' %}" ><button class="btn btn-secondary">Create Forum</button></a>
+                </div>
+                {% else %}
+                <div class="buttons">
+                    <a href="{% url 'users:signup' %}"> <button class="btn btn-primary">Sign Up</button></a>
+                    <a href="{% url 'users:login' %}"> <button class="btn btn-secondary">Login</button></a>
+                </div>
+                {% endif %}
+
+        {% if forums %}
+            <div class="popular-forums-section">
+                <h2>Popular Forums</h2>
+
+                <div class="forums-list">
+                    {% for forum in forums %}
+                        <div class="forum-card">
+                            <h3><a href="{% url 'forums:forum_detail' forum.id %}">{{ forum.title }}</a></h3>
+                            <p class="description">{{ forum.description }}</p>
+
+                            {% if forum.tags.all %}
+                            <div class="forum-tags">
+                                {% for tag in forum.tags.all %}
+                                    <span class="forum-tag">{{ tag.name }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            <div class="forum-meta">
+                                <span class="members">{{ forum.members.count }} members</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+{% endblock %}

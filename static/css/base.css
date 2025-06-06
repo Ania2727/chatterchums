@@ -1,0 +1,235 @@
+/* Core styles and layout */
+body {
+    font-family: 'Poppins';
+    margin: 0;
+    padding: 0;
+    background-color: #fafafa;
+    text-align: center;
+    justify-content: center;
+}
+
+a {
+    text-decoration: none;
+}
+
+/* NAV & HEADER */
+/*navbar*/
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 35px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.navbar .logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.navbar .logo img {
+    width: 40px;
+    height: 40px;
+    margin-right: 5px;
+    transform: translateY(3px);
+    vertical-align: middle;
+}
+
+.navbar .logo span {
+    display: inline-block;
+    vertical-align: middle;
+    line-height: 1;
+}
+
+.nav-links {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #333;
+    padding: 8px 16px;
+    border-radius: 20px;
+    transition: background-color 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    line-height: normal;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+    background-color: #ff914d;
+    color: #af3600;
+}
+
+.nav-logo-link {
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.nav-logo-link:hover {
+    opacity: 0.9;
+}
+
+/* Profile Icon and Dropdown */
+.profile-dropdown {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
+}
+
+.profile-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    object-fit: cover;
+    vertical-align: middle;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 50px;
+    right: 0;
+    background-color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    z-index: 10;
+}
+
+.profile-dropdown .dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: white;
+    border: 1px solid #ddd;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+    width: 150px;
+}
+
+.profile-dropdown .dropdown-menu.show {
+    display: block;
+}
+
+.profile-dropdown .dropdown-menu a {
+    display: block;
+    padding: 8px;
+    color: #333;
+    text-decoration: none;
+}
+
+.profile-dropdown .dropdown-menu a:hover {
+    background-color: #f0f0f0;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+/* Hide default HTML checkbox */
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Toggle Switch - Slider */
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: #ff914d;
+}
+
+input:focus + .toggle-slider {
+    box-shadow: 0 0 1px #ff914d;
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+}
+
+/* Logo styling */
+.logo img {
+    width: 60px;
+}
+
+.big-logo img {
+    width: 15%;
+    margin-top: 40px;
+}
+
+.big-logo h1 {
+    font-size: 48px;
+    color: #000;
+    padding: 0 10px 10px;
+    font-weight: bold;
+}
+
+/* Separator */
+.separator {
+    display: flex;
+    align-items: center;
+    margin: 16px 0;
+    color: #999;
+}
+
+.separator span {
+    font-size: 14px;
+}
+
+.separator::before,
+.separator::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background-color: #ddd;
+    margin: 0 10px;
+}
+
+/* `Responsive styles */
+@media (max-width: 768px) {
+    .big-logo img {
+        width: 30%;
+    }
+}

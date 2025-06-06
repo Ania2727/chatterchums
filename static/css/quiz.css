@@ -1,0 +1,117 @@
+/* Quiz Styles */
+.quiz-container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 30px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.quiz-container h2 {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.quiz-container p {
+    color: #666;
+    margin-bottom: 25px;
+    font-size: 16px;
+}
+
+/* Logo styling */
+.logo {
+    text-align: center;
+    margin: 30px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo img {
+    width: 50px;
+    height: 50px;
+    margin-right: 10px;
+}
+
+.logo span {
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Interest buttons container - GRID LAYOUT */
+.interests {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+    justify-content: center;
+    margin: 20px 0 30px;
+    width: 100%;
+}
+
+/* Interest button styling */
+.interest-btn {
+    padding: 10px 15px;
+    border-radius: 20px;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    color: #333;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+    width: 100%;
+    text-align: center;
+}
+
+.interest-btn:hover {
+    background-color: #f0f0f0;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Selected state for interest buttons */
+.interest-btn.selected {
+    background-color: #ff914d;
+    color: white;
+    border-color: #ff7b2c;
+    box-shadow: 0 2px 5px rgba(255, 145, 77, 0.3);
+}
+
+/* Submit button */
+.quiz-container .btn {
+    margin-top: 20px;
+    min-width: 150px;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .quiz-container {
+        width: 95%;
+        padding: 20px;
+    }
+
+    .interests {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
+    }
+
+    .interest-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .interests {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+
+    .interest-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+}

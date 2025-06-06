@@ -1,0 +1,74 @@
+/* Explore Page Styles */
+.explore-container {
+    width: 60%;
+    margin: 0 auto;
+    padding: 20px;
+    text-align: center;
+}
+
+.explore-container h1 {
+    font-size: 18px;
+    margin-bottom: 20px;
+    color: #333;
+    font-weight: normal;
+}
+
+#recommendations {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+/* Explore page forum cards */
+.explore-container .forum-card {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    width: 40%;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out;
+}
+
+.explore-container .forum-card:hover {
+    transform: scale(1.05);
+}
+
+.explore-container .forum-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    text-align: center;
+    color: black;
+
+}
+
+.explore-container .forum-card p {
+    font-size: 1rem;
+    color: #666;
+}
+
+
+.explore-container a {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 8px 16px;
+    color: black;
+    border-radius: 5px;
+    text-decoration: none;
+}
+
+.explore-container .forum-card h3 a:hover {
+    color: #0056b3;
+}
+
+/* Responsive styles for explore page */
+@media (max-width: 768px) {
+    .explore-container {
+        width: 90%;
+    }
+
+    .explore-container .forum-card {
+        width: 100%;
+    }
+}

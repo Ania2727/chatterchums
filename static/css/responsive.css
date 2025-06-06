@@ -1,0 +1,65 @@
+/* RESPONSIVE STYLES */
+@media (max-width: 768px) {
+    /* Form elements */
+    .signup-form input[type="email"],
+    .signup-form input[type="text"],
+    .signup-form input[type="password"],
+    .login-form input[type="text"],
+    .login-form input[type="password"],
+    .btn {
+        width: 80%;
+    }
+
+    /* Error messages */
+    .errorlist {
+        padding-left: 10%;
+    }
+
+    .messages {
+        width: 90%;
+    }
+
+    /* Logo sizing */
+    .big-logo img {
+        width: 30%;
+    }
+
+    /* Form fields */
+    .form-field {
+        width: 100%;
+    }
+
+    .create-form .submit {
+        width: 100%;
+    }
+
+    /* Interest buttons */
+    .interest-btn {
+        width: 40%;
+    }
+}
+
+/* Tablet and larger screens */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .signup-form input[type="email"],
+    .signup-form input[type="text"],
+    .signup-form input[type="password"],
+    .login-form input[type="text"],
+    .login-form input[type="password"],
+    .btn {
+        width: 40%;
+    }
+
+    .big-logo img {
+        width: 20%;
+    }
+}
+
+/* Larger desktop screens */
+@media (min-width: 1200px) {
+    .forum-container,
+    .topic-container,
+    .forums-container {
+        max-width: 1200px;
+    }
+}
