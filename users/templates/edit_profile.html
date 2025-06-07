@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ChatterChums - Edit Profile{% endblock %}
+
+{% block content %}
+    <div class="profile-container">
+        <div class="user-info">
+            <div class="section-header">
+                <h2>Edit Profile</h2>
+            </div>
+
+            <form method="POST" enctype="multipart/form-data" class="edit-profile-form">
+                {% csrf_token %}
+
+                <div class="form-fields">
+                    <div class="profile-picture-field">
+                        <label>Profile Picture</label>
+                        <div class="profile-picture-preview" id="preview-container">
+                            {% if user.userprofile.profile_pic %}
+                                <img src="{{ user.userprofile.profile_pic.url }}" alt="Current profile picture" class="current-profile-pic" id="profile-preview">
+                            {% else %}
+                                <div class="profile-picture-placeholder" id="placeholder-container">
+                                    <span>{{ user.username.0|upper }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="file-input-wrapper" style="justify-content: center; margin-top: 15px;">
+                            <input type="file" name="profile_pic" id="id_profile_pic" class="hidden-file-input" accept="image/*">
+                            <label for="id_profile_pic" class="btn btn-light file-input-label">Choose New Picture</label>
+                            <span class="selected-file-name" id="file-name-display">No file selected</span>
+                        </div>
+                        {% if form.profile_pic.help_text %}
+                            <p class="help-text">{{ form.profile_pic.help_text }}</p>
+                        {% endif %}
+                        {% if form.profile_pic.errors %}
+                            <div class="field-error">
+                                {% for error in form.profile_pic.errors %}
+                                    <p class="error-message">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Bio field -->
+                    <div class="form-field">
+                        <label for="{{ form.bio.id_for_label }}">Bio</label>
+                        {{ form.bio }}
+                        {% if form.bio.help_text %}
+                            <p class="help-text">{{ form.bio.help_text }}</p>
+                        {% endif %}
+                        {% if form.bio.errors %}
+                            <div class="field-error">
+                                {% for error in form.bio.errors %}
+                                    <p class="error-message">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-blue">Save Changes</button>
+                    <a href="{% url 'users:profile' %}" class="btn btn-light">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('id_profile_pic');
+    const fileNameDisplay = document.getElementById('file-name-display');
+    const previewContainer = document.getElementById('preview-container');
+
+    if (fileInput && fileNameDisplay && previewContainer) {
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files.length > 0) {
+                // Update filename display
+                fileNameDisplay.textContent = this.files[0].name;
+
+                // Create image preview
+                const file = this.files[0];
+                if (file.type.match('image.*')) {
+                    const reader = new FileReader();
+
+                    reader.onload = function(e) {
+                        // Clear the preview container first
+                        previewContainer.innerHTML = '';
+
+                        // Create a new image element
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.alt = "Profile picture preview";
+                        img.className = "current-profile-pic";
+                        img.id = "profile-preview";
+
+                        // Add to the preview container
+                        previewContainer.appendChild(img);
+                    };
+
+                    // Start reading the file as a data URL
+                    reader.readAsDataURL(file);
+                }
+            } else {
+                fileNameDisplay.textContent = 'No file selected';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

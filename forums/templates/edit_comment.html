@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Comment - ChatterChums{% endblock %}
+
+{% block content %}
+    <div class="form-container">
+        <h1 class="form-title">Edit Comment</h1>
+        <h2 class="form-subtitle">Topic: {{ topic.title }}</h2>
+
+        <form method="post" class="create-form">
+            {% csrf_token %}
+
+            <div class="form-field">
+                <label for="{{ form.content.id_for_label }}">Comment</label>
+                {{ form.content }}
+                {% if form.content.errors %}
+                    <div class="field-error">
+                        {% for error in form.content.errors %}
+                            <p class="error-message">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <button class="submit" type="submit">Update Comment</button>
+        </form>
+
+        <div class="back-link">
+            <a href="{% url 'forums:topic_detail' forum.id topic.id %}">Back to Topic</a>
+        </div>
+    </div>
+{% endblock %}

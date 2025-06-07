@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ forum.title }} - ChatterChums{% endblock %}
+
+{% block content %}
+    <div class="forum-container">
+        <div class="forum-header">
+            <div class="forum-title-section">
+                <h1 class="forum-title">{{ forum.title }}</h1>
+                <p class="forum-description">{{ forum.description }}</p>
+
+                <div class="forum-meta">
+                    <span class="creator">Created by: {{ forum.creator.username }}</span>
+                    <span class="members">{{ forum.members.count }} members</span>
+                    <span class="date">Created on: {{ forum.date_posted|date:"F j, Y" }}</span>
+                </div>
+
+                {% if forum.tags.all %}
+                    <div class="forum-tags">
+                        {% for tag in forum.tags.all %}
+                            <span class="forum-tag">{{ tag.name }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if forum.link %}
+                    <div class="forum-link">
+                        <a href="{{ forum.link }}" target="_blank" rel="noopener noreferrer">Visit external resource</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="forum-actions">
+            {% if is_member %}
+                <a href="{% url 'forums:create_topic' forum.id %}" class="btn btn-primary">New Topic</a>
+                <a href="{% url 'forums:leave_forum' forum.id %}" class="btn btn-secondary">Leave Forum</a>
+            {% else %}
+                <a href="{% url 'forums:join_forum' forum.id %}" class="btn btn-primary">Join Forum</a>
+            {% endif %}
+            <a href="{% url 'forums:forum_list' %}" class="btn btn-secondary">Back to Forums</a>
+        </div>
+
+        <div class="topics-container">
+            <h2 class="section-title">Topics</h2>
+
+            {% if is_member %}
+                {% if topics %}
+                    <div class="topics-header">
+                        <div class="topic-title-header">Topic</div>
+                        <div class="topic-author-header">Author</div>
+                        <div class="topic-stats-header">Replies</div>
+                        <div class="topic-date-header">Created</div>
+                    </div>
+
+                    <div class="topics-list">
+                        {% for topic in topics %}
+                            <div class="topic-item">
+                                <div class="topic-title">
+                                    <a href="{% url 'forums:topic_detail' forum.id topic.id %}">{{ topic.title }}</a>
+                                    <p class="topic-preview">{{ topic.content|truncatechars:100 }}</p>
+                                </div>
+                                <div class="topic-author">
+                                    {{ topic.author.username }}
+                                </div>
+                                <div class="topic-stats">
+                                    {{ topic.comment_count }}
+                                </div>
+                                <div class="topic-date">
+                                    {{ topic.created_at|date:"M d, Y" }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="no-topics">
+                        <p>No topics have been created yet. Be the first to start a discussion!</p>
+                        <a href="{% url 'forums:create_topic' forum.id %}" class="btn btn-primary btn-center">Create
+                            First
+                            Topic</a>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="join-notice">
+                    <p>You need to join this forum to view topics and participate.</p>
+                    <a href="{% url 'forums:join_forum' forum.id %}" class="btn btn-primary">Join Forum</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

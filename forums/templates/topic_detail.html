@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ topic.title }} - ChatterChums{% endblock %}
+
+{% block content %}
+    <div class="topic-container">
+        <div class="breadcrumb">
+            <a href="{% url 'forums:forum_list' %}">Forums</a> &gt;
+            <a href="{% url 'forums:forum_detail' forum.id %}">{{ forum.title }}</a> &gt;
+            <span>{{ topic.title }}</span>
+        </div>
+
+        <div class="topic-header">
+            <h1 class="topic-title">{{ topic.title }}</h1>
+            <div class="topic-meta">
+                <span class="topic-author">Posted by {{ topic.author.username }}</span>
+                <span class="topic-date">{{ topic.created_at|date:"F j, Y" }}</span>
+                <span class="topic-views">{{ topic.views }} views</span>
+            </div>
+        </div>
+
+        <div class="topic-content">
+            {{ topic.content|linebreaks }}
+        </div>
+
+        {% if user == topic.author %}
+            <div class="topic-actions">
+                <a href="{% url 'forums:edit_topic' forum.id topic.id %}" class="btn btn-secondary">Edit Topic</a>
+            </div>
+        {% endif %}
+
+        <div class="comments-section">
+            <h2 class="section-title">Comments ({{ comments|length }})</h2>
+
+            {% if comments %}
+                <div class="comments-list">
+                    {% for comment in comments %}
+                        <div class="comment-item">
+                            <div class="comment-meta">
+                                <span class="comment-author">{{ comment.author.username }}</span>
+                                <span class="comment-date">{{ comment.created_at|date:"F j, Y" }}</span>
+                            </div>
+
+                            <div class="comment-content">
+                                {{ comment.content|linebreaks }}
+                            </div>
+
+                            {% if user == comment.author %}
+                                <div class="comment-actions">
+                                    <a href="{% url 'forums:edit_comment' forum.id topic.id comment.id %}"
+                                       class="btn-link">Edit</a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-comments">
+                    <p>No comments yet. Be the first to comment!</p>
+                </div>
+            {% endif %}
+
+            {% if user.is_authenticated %}
+                <div class="add-comment">
+                    <h3>Add a Comment</h3>
+                    <form method="post" action="{% url 'forums:add_comment' forum.id topic.id %}">
+                        {% csrf_token %}
+
+                        <div class="form-field">
+                            {{ comment_form.content }}
+                            {% if comment_form.content.errors %}
+                                <div class="field-error">
+                                    {% for error in comment_form.content.errors %}
+                                        <p class="error-message">{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <button type="submit" class="submit">Post Comment</button>
+                    </form>
+                </div>
+            {% else %}
+                <div class="login-to-comment">
+                    <p>Please <a href="{% url 'users:login' %}">log in</a> to comment.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="back-link">
+            <a href="{% url 'forums:forum_detail' forum.id %}">Back to {{ forum.title }}</a>
+        </div>
+    </div>
+{% endblock %}

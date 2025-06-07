@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Forum - ChatterChums{% endblock %}
+
+{% block content %}
+    <div class="form-container">
+        <h1 class="form-title">Create New Forum</h1>
+
+        <form method="post" class="create-form">
+            {% csrf_token %}
+
+            <div class="form-field">
+                <label for="{{ form.title.id_for_label }}">Title</label>
+                {{ form.title }}
+                {% if form.title.errors %}
+                    <div class="field-error">
+                        {% for error in form.title.errors %}
+                            <p class="error-message">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-field">
+                <label for="{{ form.description.id_for_label }}">Description</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                    <div class="field-error">
+                        {% for error in form.description.errors %}
+                            <p class="error-message">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-field">
+                <label for="{{ form.link.id_for_label }}">External Link (Optional)</label>
+                {{ form.link }}
+                <small class="help-text">Add a relevant website URL related to your forum topic (e.g., official website,
+                    resource page). Leave blank if not needed.</small>
+                {% if form.link.errors %}
+                    <div class="field-error">
+                        {% for error in form.link.errors %}
+                            <p class="error-message">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-field tags-field">
+                <label>Tags</label>
+                <div class="tag-options">
+                    {{ form.tags }}
+                </div>
+                <small class="help-text">{{ form.tags.help_text }}</small>
+                {% if form.tags.errors %}
+                    <div class="field-error">
+                        {% for error in form.tags.errors %}
+                            <p class="error-message">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-info">
+                <p>Forum will be created with your username ({{ user.username }}) as the display name.</p>
+            </div>
+
+            <button class="submit" type="submit">Create Forum</button>
+        </form>
+
+        <div class="back-link">
+            <a href="{% url 'forums:forum_list' %}">Back to forums</a>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}All Forums - ChatterChums{% endblock %}
+
+{% block content %}
+    <div class="forums-container">
+        <div class="forums-header">
+            <h1>Browse All Forums</h1>
+            <a href="{% url 'forums:add_forum' %}" class="btn btn-primary">Create New Forum</a>
+        </div>
+
+        {% if forums %}
+            <div class="forums-list">
+                {% for forum in forums %}
+                    <a href="{% url 'forums:forum_detail' forum.id %}" class="forum-card-link">
+                        <div class="forum-card">
+                            <h3>{{ forum.title }}</h3>
+                            <p class="description">{{ forum.description }}</p>
+
+                            {% if forum.tags.all %}
+                            <div class="forum-tags">
+                                {% for tag in forum.tags.all %}
+                                    <span class="forum-tag">{{ tag.name }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            <div class="forum-meta">
+                                <span class="creator">Created by: {{ forum.creator.username }}</span>
+                                <span class="members">{{ forum.members.count }} members</span>
+                                <span class="topics">{{ forum.topic_count }} topics</span>
+                                {% if forum.last_activity %}
+                                    <span class="activity">Last active: {{ forum.last_activity|date:"F j, Y" }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-forums">
+                <p>No forums have been created yet.</p>
+                <a href="{% url 'forums:add_forum' %}" class="btn btn-primary btn-center">Create the First Forum</a>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

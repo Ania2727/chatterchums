@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Topic - {{ topic.title }} - ChatterChums{% endblock %}
+
+{% block content %}
+    <div class="form-container">
+        <h1 class="form-title">Edit Topic</h1>
+        <h2 class="form-subtitle">Forum: {{ forum.title }}</h2>
+
+        <form method="post" class="create-form">
+            {% csrf_token %}
+
+            <div class="form-field">
+                <label for="{{ form.title.id_for_label }}">Topic Title</label>
+                {{ form.title }}
+                {% if form.title.errors %}
+                    <div class="field-error">
+                        {% for error in form.title.errors %}
+                            <p class="error-message">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-field">
+                <label for="{{ form.content.id_for_label }}">Content</label>
+                {{ form.content }}
+                {% if form.content.errors %}
+                    <div class="field-error">
+                        {% for error in form.content.errors %}
+                            <p class="error-message">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <button class="submit" type="submit">Update Topic</button>
+        </form>
+
+        <div class="back-link">
+            <a href="{% url 'forums:topic_detail' forum.id topic.id %}">Back to Topic</a>
+        </div>
+    </div>
+{% endblock %}
