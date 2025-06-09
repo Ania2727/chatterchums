@@ -61,7 +61,7 @@ class TopicFactory(DjangoModelFactory):
     author = factory.SubFactory(UserFactory)
     title = factory.Faker('sentence', nb_words=6)
     content = factory.Faker('text')
-    views = factory.Faker('random_int', min=0, max=1000)
+    views = 0  # Default to 0 instead of random
 
 
 class CommentFactory(DjangoModelFactory):
