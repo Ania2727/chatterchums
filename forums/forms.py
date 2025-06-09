@@ -4,7 +4,7 @@ from django import forms
 
 
 class CreateInForum(ModelForm):
-    link = forms.URLField(required=False)
+    link = forms.URLField(required=False, assume_scheme='https')
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         widget=forms.CheckboxSelectMultiple,
