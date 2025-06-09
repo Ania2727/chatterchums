@@ -200,7 +200,7 @@ def leave_forum(request, forum_id):
     forum_obj.members.remove(request.user)
     messages.info(request, f'You have left {forum_obj.title}')
 
-    return redirect('forums:forum_list.html')
+    return redirect('forums:forum_list')
 
 
 def home(request):
