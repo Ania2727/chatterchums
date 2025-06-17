@@ -1,0 +1,214 @@
+<h2>Tag Management</h2>
+
+<div class="tag-management-section">
+    <h3>Add New Tag</h3>
+    <form id="add-tag-form" class="add-tag-form">
+        {% csrf_token %}
+        <div class="form-group">
+            <input type="text" name="tag_name" placeholder="Enter tag name..." class="tag-input" required>
+            <button type="submit" class="btn btn-primary">Add Tag</button>
+        </div>
+    </form>
+</div>
+
+<div class="tag-management-section">
+    <h3>Existing Tags</h3>
+    
+    <div class="tag-search">
+        <input type="text" id="tag-search-input" placeholder="Search tags..." class="search-input">
+    </div>
+    
+    <div class="tags-list" id="tags-list">
+        <p>Loading tags...</p>
+    </div>
+</div>
+
+<script>
+let allTags = [];
+
+function loadTags() {
+    fetch('{% url "users:list_tags" %}')
+        .then(response => response.json())
+        .then(data => {
+            allTags = data.tags || [];
+            displayTags(allTags);
+        })
+        .catch(error => {
+            console.error('Error loading tags:', error);
+            document.getElementById('tags-list').innerHTML = '<p>Error loading tags.</p>';
+        });
+}
+
+function displayTags(tags) {
+    const tagsList = document.getElementById('tags-list');
+    if (tags && tags.length > 0) {
+        tagsList.innerHTML = tags.map(tag => `
+            <div class="tag-item" data-tag-id="${tag.id}">
+                <span class="tag-name">${tag.name}</span>
+                <div class="tag-actions">
+                    <input type="text" class="edit-tag-input" value="${tag.name}" data-original="${tag.name}">
+                    <button onclick="updateTag(${tag.id})" class="btn btn-secondary btn-sm">Update</button>
+                    <button onclick="deleteTag(${tag.id})" class="btn btn-danger btn-sm">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        tagsList.innerHTML = '<p>No tags available. Add some tags to get started.</p>';
+    }
+}
+
+function filterTags() {
+    const searchTerm = document.getElementById('tag-search-input').value.toLowerCase();
+    const filteredTags = allTags.filter(tag => 
+        tag.name.toLowerCase().includes(searchTerm)
+    );
+    displayTags(filteredTags);
+}
+
+function addTag() {
+    const form = document.getElementById('add-tag-form');
+    const formData = new FormData(form);
+    
+    fetch('{% url "users:add_tag" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            form.reset();
+            loadTags();
+        } else {
+            alert(data.error || 'Error adding tag');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error adding tag');
+    });
+}
+
+function updateTag(tagId) {
+    const tagItem = document.querySelector(`[data-tag-id="${tagId}"]`);
+    const input = tagItem.querySelector('.edit-tag-input');
+    const newName = input.value.trim();
+    
+    if (!newName) {
+        alert('Tag name cannot be empty');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('new_name', newName);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    fetch(`{% url "users:edit_tag" 0 %}`.replace('0', tagId), {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTags();
+        } else {
+            alert(data.error || 'Error updating tag');
+            input.value = input.dataset.original;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating tag');
+        input.value = input.dataset.original;
+    });
+}
+
+function deleteTag(tagId) {
+    if (!confirm('Are you sure you want to delete this tag?')) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    fetch(`{% url "users:delete_tag" 0 %}`.replace('0', tagId), {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTags();
+        } else {
+            alert(data.error || 'Error deleting tag');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error deleting tag');
+    });
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('add-tag-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        addTag();
+    });
+    
+    document.getElementById('tag-search-input').addEventListener('input', filterTags);
+});
+</script>
+
+<style>
+.tag-management-section {
+    margin-bottom: 30px;
+}
+
+.add-tag-form .form-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.tag-input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+.tag-search {
+    margin-bottom: 15px;
+}
+
+.tag-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.tag-name {
+    font-weight: bold;
+    color: #333;
+}
+
+.tag-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.edit-tag-input {
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    width: 150px;
+}
+</style>

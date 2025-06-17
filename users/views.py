@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import logout, login
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
@@ -9,6 +9,8 @@ from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.http import JsonResponse
 from forums.models import Forum, Topic, Comment, Tag
+from django.contrib.auth.models import User, Group
+from django.db.models import Q
 from .forms import CustomUserCreationForm, CustomAuthenticationForm, UserProfileForm
 
 logger = logging.getLogger(__name__)
@@ -22,11 +24,39 @@ def profile_view(request):
     recent_comments = Comment.objects.filter(author=request.user).order_by('-created_at')[:5]
 
     context = {
+        'user': request.user,  # додано для сумісності з шаблоном
         'created_forums': created_forums,
         'joined_forums': joined_forums,
         'recent_topics': recent_topics,
         'recent_comments': recent_comments,
+        'is_own_profile': True,  # додано - завжди True для власного профілю
     }
+    return render(request, 'profile.html', context)
+
+@login_required
+def view_user_profile(request, user_id):
+    # Отримуємо користувача або 404
+    profile_user = get_object_or_404(User, id=user_id)
+    
+    # Якщо це власний профіль, перенаправляємо на звичайну сторінку профілю
+    if profile_user == request.user:
+        return redirect('users:profile')
+    
+    # Отримуємо дані для чужого профілю
+    created_forums = Forum.objects.filter(creator=profile_user)
+    joined_forums = Forum.objects.filter(members=profile_user).exclude(creator=profile_user)
+    recent_topics = Topic.objects.filter(author=profile_user).order_by('-created_at')[:3]
+    recent_comments = Comment.objects.filter(author=profile_user).order_by('-created_at')[:5]
+    
+    context = {
+        'user': profile_user,  # користувач чий профіль переглядаємо
+        'created_forums': created_forums,
+        'joined_forums': joined_forums,
+        'recent_topics': recent_topics,
+        'recent_comments': recent_comments,
+        'is_own_profile': False,  # завжди False для чужого профілю
+    }
+    
     return render(request, 'profile.html', context)
 
 
@@ -290,3 +320,263 @@ def admin_panel_view(request):
         return redirect('home')
     
     return render(request, 'admin_panel.html')
+
+@login_required
+def add_tag(request):
+    if not (hasattr(request.user, 'is_forum_admin') and request.user.is_forum_admin()):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    if request.method == 'POST':
+        tag_name = request.POST.get('tag_name')
+        if tag_name:
+            tag, created = Tag.objects.get_or_create(name=tag_name.strip())
+            if created:
+                return JsonResponse({'success': True, 'tag': {'id': tag.id, 'name': tag.name}})
+            else:
+                return JsonResponse({'error': 'Tag already exists'}, status=400)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@login_required
+def edit_tag(request, tag_id):
+    if not (hasattr(request.user, 'is_forum_admin') and request.user.is_forum_admin()):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    tag = get_object_or_404(Tag, id=tag_id)
+    if request.method == 'POST':
+        new_name = request.POST.get('new_name')
+        if new_name:
+            tag.name = new_name.strip()
+            tag.save()
+            return JsonResponse({'success': True, 'tag': {'id': tag.id, 'name': tag.name}})
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@login_required
+def delete_tag(request, tag_id):
+    if not (hasattr(request.user, 'is_forum_admin') and request.user.is_forum_admin()):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    tag = get_object_or_404(Tag, id=tag_id)
+    if request.method == 'POST':
+        tag.delete()
+        return JsonResponse({'success': True})
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@login_required
+def list_tags(request):
+    if not (hasattr(request.user, 'is_forum_admin') and request.user.is_forum_admin()):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    tags = Tag.objects.all().order_by('name')
+    tags_data = [{'id': tag.id, 'name': tag.name} for tag in tags]
+    
+    return JsonResponse({'tags': tags_data})
+
+@login_required
+def list_users(request):
+    if not (hasattr(request.user, 'is_forum_admin') and request.user.is_forum_admin()):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    # Отримуємо групи
+    admin_group = Group.objects.get(name='administrator')
+    moderator_group = Group.objects.get(name='moderator')
+    
+    # Фільтри
+    role_filter = request.GET.get('role', 'all')  # all, admin, moderator, regular
+    search_query = request.GET.get('search', '')
+    
+    # Базовий запит
+    users = User.objects.all()
+    
+    # Пошук за username або email
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query) | 
+            Q(email__icontains=search_query)
+        )
+    
+    # Фільтр за ролями
+    if role_filter == 'admin':
+        users = users.filter(groups=admin_group)
+    elif role_filter == 'moderator':
+        users = users.filter(groups=moderator_group).exclude(groups=admin_group)
+    elif role_filter == 'regular':
+        users = users.exclude(groups__in=[admin_group, moderator_group])
+    
+    users_data = []
+    for user in users[:50]:  # Обмежуємо 50 користувачами
+        is_admin = user.groups.filter(name='administrator').exists()
+        is_moderator = user.groups.filter(name='moderator').exists()
+        
+        role = 'Administrator' if is_admin else ('Moderator' if is_moderator else 'User')
+        
+        users_data.append({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'date_joined': user.date_joined.strftime('%Y-%m-%d'),
+            'is_admin': is_admin,
+            'is_moderator': is_moderator,
+            'role': role
+        })
+    
+    return JsonResponse({'users': users_data})
+
+@login_required
+def promote_to_moderator(request, user_id):
+    if not (hasattr(request.user, 'is_forum_admin') and request.user.is_forum_admin()):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    if request.method == 'POST':
+        user = get_object_or_404(User, id=user_id)
+        moderator_group = Group.objects.get(name='moderator')
+        
+        if not user.groups.filter(name='moderator').exists():
+            user.groups.add(moderator_group)
+            return JsonResponse({'success': True, 'message': f'{user.username} promoted to moderator'})
+        else:
+            return JsonResponse({'error': 'User is already a moderator'}, status=400)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@login_required
+def promote_to_admin(request, user_id):
+    if not (hasattr(request.user, 'is_forum_admin') and request.user.is_forum_admin()):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    if request.method == 'POST':
+        user = get_object_or_404(User, id=user_id)
+        admin_group = Group.objects.get(name='administrator')
+        moderator_group = Group.objects.get(name='moderator')
+        
+        if not user.groups.filter(name='administrator').exists():
+            user.groups.add(admin_group)
+            # Адмін автоматично є модератором
+            if not user.groups.filter(name='moderator').exists():
+                user.groups.add(moderator_group)
+            return JsonResponse({'success': True, 'message': f'{user.username} promoted to administrator'})
+        else:
+            return JsonResponse({'error': 'User is already an administrator'}, status=400)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@login_required
+def remove_moderator(request, user_id):
+    if not (hasattr(request.user, 'is_forum_admin') and request.user.is_forum_admin()):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    if request.method == 'POST':
+        user = get_object_or_404(User, id=user_id)
+        
+        # Не можна забрати права у себе
+        if user.id == request.user.id:
+            return JsonResponse({'error': 'Cannot remove your own moderator rights'}, status=400)
+        
+        moderator_group = Group.objects.get(name='moderator')
+        
+        if user.groups.filter(name='moderator').exists():
+            user.groups.remove(moderator_group)
+            return JsonResponse({'success': True, 'message': f'Moderator rights removed from {user.username}'})
+        else:
+            return JsonResponse({'error': 'User is not a moderator'}, status=400)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@login_required
+def remove_admin(request, user_id):
+    if not (hasattr(request.user, 'is_forum_admin') and request.user.is_forum_admin()):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    if request.method == 'POST':
+        user = get_object_or_404(User, id=user_id)
+        
+        # Не можна забрати права у себе
+        if user.id == request.user.id:
+            return JsonResponse({'error': 'Cannot remove your own admin rights'}, status=400)
+        
+        admin_group = Group.objects.get(name='administrator')
+        
+        if user.groups.filter(name='administrator').exists():
+            user.groups.remove(admin_group)
+            return JsonResponse({'success': True, 'message': f'Admin rights removed from {user.username}'})
+        else:
+            return JsonResponse({'error': 'User is not an administrator'}, status=400)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@login_required
+def management_stats(request):
+    if not (hasattr(request.user, 'is_forum_admin') and request.user.is_forum_admin()):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    admin_group = Group.objects.get(name='administrator')
+    moderator_group = Group.objects.get(name='moderator')
+    
+    admin_count = User.objects.filter(groups=admin_group).count()
+    moderator_count = User.objects.filter(groups=moderator_group).exclude(groups=admin_group).count()
+    total_users = User.objects.count()
+    
+    return JsonResponse({
+        'admin_count': admin_count,
+        'moderator_count': moderator_count,
+        'total_users': total_users
+    })
+
+@login_required
+def search_users(request):
+    if not (hasattr(request.user, 'is_forum_admin') and request.user.is_forum_admin()):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    query = request.GET.get('q', '').strip()
+    if len(query) < 2:
+        return JsonResponse({'users': []})
+    
+    users = User.objects.filter(
+        Q(username__icontains=query) | Q(email__icontains=query)
+    ).exclude(is_superuser=True)[:10]  # Виключаємо суперюзерів, обмежуємо 10 результатами
+    
+    admin_group = Group.objects.get(name='administrator')
+    moderator_group = Group.objects.get(name='moderator')
+    
+    users_data = []
+    for user in users:
+        is_admin = user.groups.filter(name='administrator').exists()
+        is_moderator = user.groups.filter(name='moderator').exists()
+        role = 'Administrator' if is_admin else ('Moderator' if is_moderator else 'User')
+        
+        users_data.append({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'is_admin': is_admin,
+            'is_moderator': is_moderator,
+            'role': role
+        })
+    
+    return JsonResponse({'users': users_data})
+
+@login_required
+def view_user_profile(request, user_id):
+    profile_user = get_object_or_404(User, id=user_id)
+    
+    created_forums = Forum.objects.filter(creator=profile_user)
+    
+    joined_forums = Forum.objects.filter(members=profile_user).exclude(creator=profile_user)
+    
+    recent_topics = Topic.objects.filter(author=profile_user).order_by('-created_at')[:3]
+    recent_comments = Comment.objects.filter(author=profile_user).order_by('-created_at')[:5]
+    
+    is_own_profile = request.user == profile_user
+    
+    context = {
+        'user': profile_user,
+        'created_forums': created_forums,
+        'joined_forums': joined_forums,
+        'recent_topics': recent_topics,
+        'recent_comments': recent_comments,
+        'is_own_profile': is_own_profile,
+    }
+    
+    return render(request, 'profile.html', context)

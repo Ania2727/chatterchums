@@ -207,3 +207,16 @@ def home(request):
     # Get 3 forums with the most members
     forums = Forum.objects.annotate(member_count=Count('members')).order_by('-member_count')[:3]
     return render(request, 'home.html', {'forums': forums})
+
+@login_required
+def delete_comment(request, forum_id, topic_id, comment_id):
+    comment = get_object_or_404(Comment, id=comment_id, topic_id=topic_id)
+    
+    if request.user == comment.author or (hasattr(request.user, 'is_forum_moderator') and request.user.is_forum_moderator()):
+        if request.method == 'POST':
+            comment.delete()
+            messages.success(request, 'Comment deleted successfully.')
+        return redirect('forums:topic_detail', forum_id=forum_id, topic_id=topic_id)
+    else:
+        messages.error(request, 'You do not have permission to delete this comment.')
+        return redirect('forums:topic_detail', forum_id=forum_id, topic_id=topic_id)

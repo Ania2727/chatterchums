@@ -1,0 +1,676 @@
+<h2>User Management</h2>
+
+<!-- Quick Stats -->
+<div class="management-stats">
+    <div class="stat-item" onclick="showStaffTab('admins')">
+        <span class="stat-icon">👑</span>
+        <span class="stat-number" id="admin-count">-</span>
+        <span class="stat-label">Administrators</span>
+    </div>
+    <div class="stat-item" onclick="showStaffTab('moderators')">
+        <span class="stat-icon">🛡️</span>
+        <span class="stat-number" id="moderator-count">-</span>
+        <span class="stat-label">Moderators</span>
+    </div>
+</div>
+
+<!-- User Search and Promotion -->
+<div class="promotion-section">
+    <h3>🔍 Find User to Promote</h3>
+    <div class="user-search-container">
+        <input type="text" id="user-search-input" placeholder="Enter username or email..." class="user-search-input">
+        <div class="search-results" id="search-results" style="display: none;">
+            <!-- Search results appear here -->
+        </div>
+    </div>
+</div>
+
+<!-- Staff Management -->
+<div class="staff-management-section">
+    <div class="staff-tabs">
+        <button class="staff-tab active" onclick="showStaffTab('admins')">👑 Administrators</button>
+        <button class="staff-tab" onclick="showStaffTab('moderators')">🛡️ Moderators</button>
+    </div>
+    
+    <div id="admins-list" class="staff-list active">
+        <p class="loading-text">Loading administrators...</p>
+    </div>
+    
+    <div id="moderators-list" class="staff-list">
+        <p class="loading-text">Loading moderators...</p>
+    </div>
+</div>
+
+<script>
+let searchTimeout;
+
+// Load initial data when tab is opened
+function loadManagementData() {
+    loadStats();
+    loadStaffLists();
+}
+
+function loadStats() {
+    fetch('{% url "users:management_stats" %}')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('admin-count').textContent = data.admin_count || 0;
+            document.getElementById('moderator-count').textContent = data.moderator_count || 0;
+        })
+        .catch(error => {
+            console.error('Error loading stats:', error);
+        });
+}
+
+function loadStaffLists() {
+    loadAdmins();
+    loadModerators();
+}
+
+function loadAdmins() {
+    fetch('{% url "users:list_users" %}?role=admin')
+        .then(response => response.json())
+        .then(data => {
+            displayStaffList(data.users || [], 'admins-list', 'admin');
+        })
+        .catch(error => {
+            document.getElementById('admins-list').innerHTML = '<p class="error-text">Error loading administrators.</p>';
+        });
+}
+
+function loadModerators() {
+    fetch('{% url "users:list_users" %}?role=moderator')
+        .then(response => response.json())
+        .then(data => {
+            displayStaffList(data.users || [], 'moderators-list', 'moderator');
+        })
+        .catch(error => {
+            document.getElementById('moderators-list').innerHTML = '<p class="error-text">Error loading moderators.</p>';
+        });
+}
+
+function displayStaffList(users, containerId, staffType) {
+    const container = document.getElementById(containerId);
+    
+    if (users && users.length > 0) {
+        container.innerHTML = users.map(user => `
+            <div class="staff-member">
+                <div class="staff-info">
+                    <div class="staff-main">
+                        <span class="role-icon">${staffType === 'admin' ? '👑' : '🛡️'}</span>
+                        <a href="/users/profile/${user.id}/" class="staff-username-link">
+                            <span class="username">${user.username}</span>
+                        </a>
+                        <span class="user-email">${user.email}</span>
+                    </div>
+                    <div class="staff-meta">
+                        <span class="join-date">Joined: ${user.date_joined}</span>
+                        ${user.is_admin ? '<span class="role-badge admin">Administrator</span>' : ''}
+                        ${user.is_moderator && !user.is_admin ? '<span class="role-badge moderator">Moderator</span>' : ''}
+                    </div>
+                </div>
+                <div class="staff-actions">
+                    ${getStaffActionButtons(user, staffType)}
+                </div>
+            </div>
+        `).join('');
+    } else {
+        const emptyMessage = staffType === 'admin' ? 'No administrators found.' : 'No moderators found.';
+        container.innerHTML = `<p class="empty-message">${emptyMessage}</p>`;
+    }
+}
+
+function getStaffActionButtons(user, context) {
+    let buttons = [];
+    
+    // Add "View Profile" button first
+    buttons.push(`<a href="/users/profile/${user.id}/" class="btn btn-info btn-sm" target="_blank">👤 Profile</a>`);
+    
+    if (context === 'admin') {
+        // For admin list - only show remove admin button
+        buttons.push(`<button onclick="removeAdmin(${user.id})" class="btn btn-danger btn-sm">Remove Admin</button>`);
+    } else if (context === 'moderator') {
+        // For moderator list - show promote to admin and remove moderator
+        if (!user.is_admin) {
+            buttons.push(`<button onclick="promoteToAdmin(${user.id})" class="btn btn-primary btn-sm">↗️ Make Admin</button>`);
+            buttons.push(`<button onclick="removeModerator(${user.id})" class="btn btn-warning btn-sm">❌ Remove Rights</button>`);
+        }
+    }
+    
+    return buttons.join(' ');
+}
+
+function searchUsers() {
+    const searchTerm = document.getElementById('user-search-input').value.trim();
+    const resultsContainer = document.getElementById('search-results');
+    
+    if (searchTerm.length < 2) {
+        resultsContainer.style.display = 'none';
+        return;
+    }
+    
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        fetch(`{% url "users:search_users" %}?q=${encodeURIComponent(searchTerm)}`)
+            .then(response => response.json())
+            .then(data => {
+                displaySearchResults(data.users || []);
+            })
+            .catch(error => {
+                resultsContainer.innerHTML = '<div class="search-error">Error searching users</div>';
+                resultsContainer.style.display = 'block';
+            });
+    }, 300);
+}
+
+function displaySearchResults(users) {
+    const resultsContainer = document.getElementById('search-results');
+    
+    if (users.length === 0) {
+        resultsContainer.innerHTML = '<div class="no-results">No users found</div>';
+    } else {
+        resultsContainer.innerHTML = users.slice(0, 8).map(user => `
+            <div class="search-result">
+                <div class="result-info">
+                    <a href="/users/profile/${user.id}/" class="result-username-link">
+                        <span class="result-username">${user.username}</span>
+                    </a>
+                    <span class="result-email">${user.email}</span>
+                    <span class="current-role ${user.role.toLowerCase()}">${user.role}</span>
+                </div>
+                <div class="result-actions">
+                    ${getSearchResultActions(user)}
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    resultsContainer.style.display = 'block';
+}
+
+function getSearchResultActions(user) {
+    let buttons = [];
+    
+    // Add "View Profile" button first
+    buttons.push(`<a href="/users/profile/${user.id}/" class="btn btn-info btn-sm" target="_blank">👤 Profile</a>`);
+    
+    if (!user.is_moderator && !user.is_admin) {
+        buttons.push(`<button onclick="promoteToModerator(${user.id})" class="btn btn-secondary btn-sm">Make Moderator</button>`);
+        buttons.push(`<button onclick="promoteToAdmin(${user.id})" class="btn btn-primary btn-sm">Make Admin</button>`);
+    } else if (user.is_moderator && !user.is_admin) {
+        buttons.push(`<button onclick="promoteToAdmin(${user.id})" class="btn btn-primary btn-sm">↗️ Make Admin</button>`);
+        buttons.push(`<button onclick="removeModerator(${user.id})" class="btn btn-warning btn-sm">❌ Remove Moderator</button>`);
+    } else if (user.is_admin) {
+        buttons.push(`<button onclick="removeAdmin(${user.id})" class="btn btn-danger btn-sm">❌ Remove Admin</button>`);
+    }
+    
+    return buttons.join(' ');
+}
+
+function showStaffTab(tabName) {
+    // Hide all staff lists
+    const staffLists = document.querySelectorAll('.staff-list');
+    staffLists.forEach(list => list.classList.remove('active'));
+    
+    // Remove active class from staff tabs
+    const staffTabs = document.querySelectorAll('.staff-tab');
+    staffTabs.forEach(tab => tab.classList.remove('active'));
+    
+    // Show selected staff list
+    const selectedList = document.getElementById(tabName + '-list');
+    if (selectedList) {
+        selectedList.classList.add('active');
+    }
+    
+    // Add active class to clicked staff tab
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
+}
+
+// Role management functions
+function promoteToModerator(userId) {
+    if (!confirm('Promote this user to moderator?')) return;
+    makeUserRequest(`{% url "users:promote_moderator" 0 %}`.replace('0', userId), 'POST');
+}
+
+function promoteToAdmin(userId) {
+    if (!confirm('Promote this user to administrator?')) return;
+    makeUserRequest(`{% url "users:promote_admin" 0 %}`.replace('0', userId), 'POST');
+}
+
+function removeModerator(userId) {
+    if (!confirm('Remove moderator rights from this user?')) return;
+    makeUserRequest(`{% url "users:remove_moderator" 0 %}`.replace('0', userId), 'POST');
+}
+
+function removeAdmin(userId) {
+    if (!confirm('Remove administrator rights from this user?')) return;
+    makeUserRequest(`{% url "users:remove_admin" 0 %}`.replace('0', userId), 'POST');
+}
+
+function makeUserRequest(url, method) {
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    fetch(url, {
+        method: method,
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            loadManagementData(); // Reload all data
+            document.getElementById('search-results').style.display = 'none'; // Hide search results
+            document.getElementById('user-search-input').value = ''; // Clear search
+        } else {
+            alert(data.error || 'Error processing request');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error processing request');
+    });
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // User search functionality
+    const searchInput = document.getElementById('user-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', searchUsers);
+    }
+    
+    // Hide search results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.user-search-container')) {
+            document.getElementById('search-results').style.display = 'none';
+        }
+    });
+});
+
+// Call loadManagementData when this tab is loaded
+if (typeof window.managementDataLoaded === 'undefined') {
+    window.managementDataLoaded = true;
+    loadManagementData();
+}
+</script>
+
+<style>
+/* Quick Stats */
+.management-stats {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 30px;
+    justify-content: center;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    min-width: 140px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #007bff;
+}
+
+.stat-icon {
+    display: block;
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.stat-number {
+    display: block;
+    font-size: 28px;
+    font-weight: bold;
+    color: #007bff;
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+}
+
+/* User Search */
+.promotion-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.promotion-section h3 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.user-search-container {
+    position: relative;
+    max-width: 500px;
+}
+
+.user-search-input {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    transition: border-color 0.3s ease;
+}
+
+.user-search-input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.search-result {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s ease;
+}
+
+.search-result:last-child {
+    border-bottom: none;
+}
+
+.search-result:hover {
+    background-color: #f8f9fa;
+}
+
+.result-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.result-username-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.result-username-link:hover .result-username {
+    color: #007bff;
+    text-decoration: underline;
+}
+
+.result-username {
+    font-weight: bold;
+    font-size: 14px;
+    transition: color 0.2s ease;
+}
+
+.staff-username-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.staff-username-link:hover .username {
+    color: #007bff;
+    text-decoration: underline;
+}
+
+.result-email {
+    font-size: 12px;
+    color: #666;
+}
+
+.current-role {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: bold;
+    width: fit-content;
+}
+
+.current-role.administrator {
+    background-color: #dc3545;
+    color: white;
+}
+
+.current-role.moderator {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.current-role.user {
+    background-color: #6c757d;
+    color: white;
+}
+
+.result-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.no-results, .search-error {
+    padding: 16px;
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
+
+.already-staff {
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+}
+
+/* Staff Management */
+.staff-management-section {
+    margin-top: 30px;
+}
+
+.staff-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+}
+
+.staff-tab {
+    padding: 12px 24px;
+    border: none;
+    background: #f5f5f5;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 3px solid transparent;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.staff-tab.active {
+    background: white;
+    border-bottom-color: #007bff;
+    color: #007bff;
+}
+
+.staff-tab:hover:not(.active) {
+    background: #e9ecef;
+}
+
+.staff-list {
+    display: none;
+    min-height: 200px;
+}
+
+.staff-list.active {
+    display: block;
+}
+
+.staff-member {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+.staff-member:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.staff-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.staff-main {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.role-icon {
+    font-size: 20px;
+}
+
+.username {
+    font-weight: bold;
+    font-size: 16px;
+    color: #333;
+    transition: color 0.2s ease;
+}
+
+.user-email {
+    color: #666;
+    font-size: 14px;
+}
+
+.staff-meta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.join-date {
+    color: #999;
+    font-size: 12px;
+}
+
+.role-badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.role-badge.admin {
+    background-color: #dc3545;
+    color: white;
+}
+
+.role-badge.moderator {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.staff-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.loading-text, .error-text, .empty-message {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 40px 20px;
+}
+
+.error-text {
+    color: #dc3545;
+}
+
+/* Button styles */
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background-color: #138496;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+</style>

@@ -1,13 +1,16 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}ChatterChums - User Profile{% endblock %}
+{% block title %}ChatterChums - {{ user.username }}'s Profile{% endblock %}
 
 {% block content %}
     <div class="profile-container">
         <div class="user-info">
             <div class="section-header">
                 <h1>{{ user.username }}'s Profile</h1>
+                {% if not is_own_profile %}
+                    <span class="profile-badge">Viewing User Profile</span>
+                {% endif %}
             </div>
 
             <div class="profile-content">
@@ -23,32 +26,50 @@
 
                 <div class="user-details">
                     <p><strong>Username:</strong> {{ user.username }}</p>
-                    <p><strong>Email:</strong> {{ user.email }}</p>
+                    {% if is_own_profile %}
+                        <p><strong>Email:</strong> {{ user.email }}</p>
+                    {% endif %}
                     <p><strong>Date Joined:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
 
                     {% if user.userprofile.bio %}
                         <p><strong>Bio:</strong> {{ user.userprofile.bio }}</p>
                     {% else %}
-                        <p><strong>Bio:</strong> <em>Edit profile to add biography.</em></p>
+                        <p><strong>Bio:</strong> 
+                            {% if is_own_profile %}
+                                <em>Edit profile to add biography.</em>
+                            {% else %}
+                                <em>No bio available.</em>
+                            {% endif %}
+                        </p>
+                    {% endif %}
+
+                    <!-- Show user role if admin/moderator -->
+                    {% if user.is_forum_admin %}
+                        <p><strong>Role:</strong> <span class="role-badge admin">👑 Administrator</span></p>
+                    {% elif user.is_forum_moderator %}
+                        <p><strong>Role:</strong> <span class="role-badge moderator">🛡️ Moderator</span></p>
                     {% endif %}
                 </div>
             </div>
 
-            <div class="actions">
-                <a href="{% url 'users:edit_profile' %}" class="btn btn-blue">Edit Profile</a>
-                <form method="POST" action="{% url 'users:delete_profile' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger"
-                            onclick="return confirm('Are you sure you want to delete your account? This action cannot be undone.')">
-                        Delete Account
-                    </button>
-                </form>
-            </div>
+            <!-- Actions - only show for own profile -->
+            {% if is_own_profile %}
+                <div class="actions">
+                    <a href="{% url 'users:edit_profile' %}" class="btn btn-blue">Edit Profile</a>
+                    <form method="POST" action="{% url 'users:delete_profile' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger"
+                                onclick="return confirm('Are you sure you want to delete your account? This action cannot be undone.')">
+                            Delete Account
+                        </button>
+                    </form>
+                </div>
+            {% endif %}
         </div>
 
         {% if created_forums %}
             <div class="forum-section">
-                <h3>Forums You've Created</h3>
+                <h3>Forums {% if is_own_profile %}You've{% else %}{{ user.username }} has{% endif %} Created</h3>
                 <div class="forum-list">
                     {% for forum in created_forums %}
                         <a href="{% url 'forums:forum_detail' forum.id %}" class="forum-item">
@@ -62,7 +83,7 @@
 
         {% if joined_forums %}
             <div class="forum-section">
-                <h3>Forums You've Joined</h3>
+                <h3>Forums {% if is_own_profile %}You've{% else %}{{ user.username }} has{% endif %} Joined</h3>
                 <div class="forum-list">
                     {% for forum in joined_forums %}
                         <a href="{% url 'forums:forum_detail' forum.id %}" class="forum-item">
