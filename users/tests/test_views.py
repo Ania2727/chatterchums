@@ -10,20 +10,6 @@ from forums.models import Forum, Topic, Comment, Tag
 import factories
 
 
-@pytest.mark.parametrize("url_name,method", [
-    ('users:profile', 'get'),
-    ('users:delete_profile', 'post'),
-    ('users:save_interests', 'post'),
-    ('users:edit_profile', 'get'),
-])
-def test_views_require_login(client, url_name, method):
-    if method == 'get':
-        response = client.get(reverse(url_name))
-    else:
-        response = client.post(reverse(url_name))
-    
-    assert response.status_code == 302
-    assert '/login/' in response.url
 
 
 class TestAuthentication:

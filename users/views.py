@@ -282,3 +282,11 @@ def edit_profile_view(request):
         form = UserProfileForm(instance=profile)
 
     return render(request, 'edit_profile.html', {'form': form})
+
+@login_required
+def admin_panel_view(request):
+    # Перевірка прав доступу
+    if not (hasattr(request.user, 'is_forum_moderator') and request.user.is_forum_moderator()):
+        return redirect('home')
+    
+    return render(request, 'admin_panel.html')

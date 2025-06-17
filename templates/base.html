@@ -32,6 +32,17 @@
         {% if user.is_authenticated %}
             <a href="{% url 'users:explore' %}" {% if 'explore' in request.path %}class="active"{% endif %}>Explore</a>
             <a href="{% url 'users:profile' %}" {% if 'profile' in request.path %}class="active"{% endif %}>Profile</a>
+            
+            <!-- Admin/Moderator Panel Link -->
+            {% if user.is_forum_moderator %}
+                <a href="{% url 'users:admin_panel' %}" {% if 'admin_panel' in request.path %}class="active"{% endif %} class="admin-link">
+                    {% if user.is_forum_admin %}
+                        Admin Panel
+                    {% else %}
+                        Mod Panel
+                    {% endif %}
+                </a>
+            {% endif %}
         {% endif %}
 
         <!-- profile icon dropdown -->
@@ -40,6 +51,12 @@
             <div class="dropdown-menu">
                 <a href="{% url 'users:settings' %}">Settings</a>
                 {% if user.is_authenticated %}
+                    <!-- Admin panel link in dropdown too -->
+                    {% if user.is_forum_moderator or user.is_forum_admin %}
+                        <a href="{% url 'users:admin_panel' %}">
+                            {% if user.is_forum_admin %}Admin Panel{% else %}Mod Panel{% endif %}
+                        </a>
+                    {% endif %}
                     <a href="{% url 'users:logout' %}">Logout</a>
                 {% else %}
                     <a href="{% url 'users:signup' %}">Sign Up</a>
@@ -74,6 +91,22 @@
         });
     });
 </script>
+
+<style>
+.admin-link {
+    background: linear-gradient(45deg, #ff6b6b, #feca57) !important;
+    color: white !important;
+    padding: 6px 12px !important;
+    border-radius: 15px !important;
+    font-weight: 500 !important;
+    text-decoration: none !important;
+}
+
+.admin-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+</style>
 
 </body>
 </html>

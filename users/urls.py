@@ -14,5 +14,6 @@ urlpatterns = [
     path('settings/', settings_view, name='settings'),
     path('save-interests/', save_interests, name='save_interests'),
     path('forum-recommendations/', forum_recommendations, name='forum-recommendations'),
-    path('edit/', edit_profile_view, name='edit_profile')
+    path('edit/', edit_profile_view, name='edit_profile'),
+    path('admin-panel/', admin_panel_view, name='admin_panel')
 ]
