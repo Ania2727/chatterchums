@@ -27,5 +27,7 @@ urlpatterns = [
     path('remove-admin/<int:user_id>/', remove_admin, name='remove_admin'),
     path('management-stats/', management_stats, name='management_stats'),
     path('search-users/', search_users, name='search_users'),
-    path('profile/<int:user_id>/', view_user_profile, name='view_profile')
+    path('profile/<int:user_id>/', view_user_profile, name='view_profile'),
+    path('password/', change_password, name='change_password'),
+    path('password/done/', change_password_done, name='change_password_done')
 ]

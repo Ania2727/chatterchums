@@ -3,7 +3,7 @@ import logging
 import os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import logout, login
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
@@ -11,7 +11,7 @@ from django.http import JsonResponse
 from forums.models import Forum, Topic, Comment, Tag
 from django.contrib.auth.models import User, Group
 from django.db.models import Q
-from .forms import CustomUserCreationForm, CustomAuthenticationForm, UserProfileForm
+from .forms import CustomUserCreationForm, CustomAuthenticationForm, UserProfileForm, UserForm
 
 logger = logging.getLogger(__name__)
 
@@ -274,44 +274,48 @@ def forum_recommendations(request):
 
     return JsonResponse({"success": False, "error": "Invalid request"}, status=400)
 
-
+@login_required
 def edit_profile_view(request):
-    profile = request.user.userprofile
+    user = request.user
+    profile = user.userprofile
 
     if request.method == 'POST':
-        form = UserProfileForm(request.POST, request.FILES, instance=profile)
+        user_form = UserForm(request.POST, instance=user)
+        profile_form = UserProfileForm(request.POST, request.FILES, instance=profile)
 
         if 'profile_pic-clear' in request.POST and request.POST['profile_pic-clear'] == 'on':
             if profile.profile_pic:
                 try:
                     profile_pic_path = profile.profile_pic.path
-
                     profile.profile_pic = None
                     profile.save()
-
                     if os.path.isfile(profile_pic_path):
                         os.remove(profile_pic_path)
-                        logger.info(f"Deleted profile picture for user {request.user.username}")
+                        logger.info(f"Deleted profile picture for user {user.username}")
                 except Exception as e:
-                    logger.error(f"Error deleting profile picture for user {request.user.username}: {str(e)}")
+                    logger.error(f"Error deleting profile picture for user {user.username}: {str(e)}")
 
         elif 'profile_pic' in request.FILES and profile.profile_pic:
             try:
                 old_pic_path = profile.profile_pic.path
-
                 if os.path.isfile(old_pic_path):
                     os.remove(old_pic_path)
-                    logger.info(f"Deleted old profile picture for user {request.user.username}")
+                    logger.info(f"Deleted old profile picture for user {user.username}")
             except Exception as e:
-                logger.error(f"Error deleting old profile picture for user {request.user.username}: {str(e)}")
+                logger.error(f"Error deleting old profile picture for user {user.username}: {str(e)}")
 
-        if form.is_valid():
-            form.save()
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
             return redirect('users:profile')
     else:
-        form = UserProfileForm(instance=profile)
+        user_form = UserForm(instance=user)
+        profile_form = UserProfileForm(instance=profile)
 
-    return render(request, 'edit_profile.html', {'form': form})
+    return render(request, 'edit_profile.html', {
+        'user_form': user_form,
+        'form': profile_form
+    })
 
 @login_required
 def admin_panel_view(request):
@@ -580,3 +584,22 @@ def view_user_profile(request, user_id):
     }
     
     return render(request, 'profile.html', context)
+
+@login_required
+def change_password(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Your password was successfully updated!')
+            return redirect('users:change_password_done')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = PasswordChangeForm(user=request.user)
+    return render(request, 'change_password.html', {'form': form})
+
+@login_required
+def change_password_done(request):
+    return render(request, 'change_password_done.html')
