@@ -19,5 +19,9 @@ urlpatterns = [
 
     path('<int:forum_id>/topic/<int:topic_id>/add-comment/',add_comment, name='add_comment'),
     path('<int:forum_id>/topic/<int:topic_id>/comment/<int:comment_id>/edit/',edit_comment, name='edit_comment'),
-    path('<int:forum_id>/topic/<int:topic_id>/comment/<int:comment_id>/delete/', delete_comment, name='delete_comment')
+    path('<int:forum_id>/topic/<int:topic_id>/comment/<int:comment_id>/delete/', delete_comment, name='delete_comment'),
+    
+    path('<int:forum_id>/topic/<int:topic_id>/add-comment-ajax/', add_comment_ajax, name='add_comment_ajax'),
+    path('<int:forum_id>/topic/<int:topic_id>/comment/<int:comment_id>/edit-ajax/', edit_comment_ajax, name='edit_comment_ajax'),
+    path('<int:forum_id>/topic/<int:topic_id>/comment/<int:comment_id>/delete-ajax/', delete_comment_ajax, name='delete_comment_ajax'),
 ]

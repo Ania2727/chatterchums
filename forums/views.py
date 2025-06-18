@@ -9,6 +9,7 @@ from forums.forms import *
 from forums.models import *
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
+from django.template.loader import render_to_string
 from django.http import JsonResponse
 
 def forum_list(request):
@@ -220,3 +221,78 @@ def delete_comment(request, forum_id, topic_id, comment_id):
     else:
         messages.error(request, 'You do not have permission to delete this comment.')
         return redirect('forums:topic_detail', forum_id=forum_id, topic_id=topic_id)
+
+@login_required
+def add_comment_ajax(request, forum_id, topic_id):
+    if request.method == 'POST':
+        forum = get_object_or_404(Forum, id=forum_id)
+        topic = get_object_or_404(Topic, id=topic_id, forum=forum)
+        
+        form = CommentForm(request.POST, user=request.user, topic=topic)
+        if form.is_valid():
+            comment = form.save()
+            
+            # Render comment HTML
+            comment_html = render_to_string('partials/comment_item.html', {
+                'comment': comment,
+                'user': request.user,
+                'forum': forum,
+                'topic': topic
+            })
+            
+            return JsonResponse({
+                'success': True,
+                'comment_html': comment_html,
+                'comment_count': topic.comments.count()
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@login_required
+def delete_comment_ajax(request, forum_id, topic_id, comment_id):
+    if request.method == 'POST':
+        comment = get_object_or_404(Comment, id=comment_id, topic_id=topic_id)
+        
+        if request.user == comment.author or (hasattr(request.user, 'is_forum_moderator') and request.user.is_forum_moderator()):
+            comment.delete()
+            topic = get_object_or_404(Topic, id=topic_id)
+            
+            return JsonResponse({
+                'success': True,
+                'comment_count': topic.comments.count()
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Permission denied'
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@login_required
+def edit_comment_ajax(request, forum_id, topic_id, comment_id):
+    comment = get_object_or_404(Comment, id=comment_id, topic_id=topic_id)
+    
+    if comment.author != request.user:
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+    
+    if request.method == 'POST':
+        form = CommentForm(request.POST, instance=comment, user=request.user, topic=comment.topic)
+        if form.is_valid():
+            form.save()
+            return JsonResponse({
+                'success': True,
+                'content': comment.content
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request'})

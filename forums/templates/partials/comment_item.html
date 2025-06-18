@@ -1,0 +1,27 @@
+<div class="comment-item" data-comment-id="{{ comment.id }}">
+    <div class="comment-meta">
+        <span class="comment-author">{{ comment.author.username }}</span>
+        <span class="comment-date">{{ comment.created_at|date:"F j, Y" }}</span>
+    </div>
+
+    <div class="comment-content">
+        <div class="comment-text">{{ comment.content|linebreaks }}</div>
+        <textarea class="comment-edit-input" style="display: none;">{{ comment.content }}</textarea>
+    </div>
+
+    {% if user.is_authenticated %}
+        {% if user == comment.author or user.is_forum_moderator %}
+            <div class="comment-actions">
+                {% if user == comment.author %}
+                    <button onclick="editComment({{ comment.id }})" class="btn-link edit-btn">Edit</button>
+                    <button onclick="saveComment({{ comment.id }})" class="btn-link save-btn" style="display: none;">Save</button>
+                    <button onclick="cancelEdit({{ comment.id }})" class="btn-link cancel-btn" style="display: none;">Cancel</button>
+                {% endif %}
+                
+                <button onclick="deleteComment({{ comment.id }})" class="btn-link delete-btn">
+                    Delete{% if user.is_forum_moderator and user != comment.author %} (Moderator){% endif %}
+                </button>
+            </div>
+        {% endif %}
+    {% endif %}
+</div>

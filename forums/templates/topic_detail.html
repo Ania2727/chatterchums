@@ -31,68 +31,58 @@
         {% endif %}
 
         <div class="comments-section">
-            <h2 class="section-title">Comments ({{ comments|length }})</h2>
+            <h2 class="section-title">Comments (<span id="comment-count">{{ comments|length }}</span>)</h2>
 
-            {% if comments %}
-                <div class="comments-list">
+            <div class="comments-list" id="comments-list">
+                {% if comments %}
                     {% for comment in comments %}
-                        <div class="comment-item">
+                        <div class="comment-item" data-comment-id="{{ comment.id }}">
                             <div class="comment-meta">
                                 <span class="comment-author">{{ comment.author.username }}</span>
                                 <span class="comment-date">{{ comment.created_at|date:"F j, Y" }}</span>
                             </div>
 
                             <div class="comment-content">
-                                {{ comment.content|linebreaks }}
+                                <div class="comment-text collapsible-content">{{ comment.content|linebreaks }}</div>
+                                <button class="btn-link toggle-expand" onclick="toggleComment(this)">Show more</button>
+                                <textarea class="comment-edit-input" style="display: none;">{{ comment.content }}</textarea>
                             </div>
 
-                            <!-- ДІЇ З КОМЕНТАРЕМ - ТІЛЬКИ ВСЕРЕДИНІ ЦИКЛУ -->
                             {% if user.is_authenticated %}
                                 {% if user == comment.author or user.is_forum_moderator %}
                                     <div class="comment-actions">
                                         {% if user == comment.author %}
-                                            <a href="{% url 'forums:edit_comment' forum.id topic.id comment.id %}"
-                                               class="btn-link">Edit</a>
+                                            <button onclick="editComment({{ comment.id }})" class="btn-link edit-btn">Edit</button>
+                                            <button onclick="saveComment({{ comment.id }})" class="btn-link save-btn" style="display: none;">Save</button>
+                                            <button onclick="cancelEdit({{ comment.id }})" class="btn-link cancel-btn" style="display: none;">Cancel</button>
                                         {% endif %}
                                         
-                                        <form method="post" action="{% url 'forums:delete_comment' forum.id topic.id comment.id %}" style="display: inline;">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn-link delete-btn" 
-                                                    onclick="return confirm('Are you sure you want to delete this comment?')">
-                                                Delete{% if user.is_forum_moderator and user != comment.author %} (Moderator){% endif %}
-                                            </button>
-                                        </form>
+                                        <button onclick="deleteComment({{ comment.id }})" class="btn-link delete-btn">
+                                            Delete{% if user.is_forum_moderator and user != comment.author %} (Moderator){% endif %}
+                                        </button>
                                     </div>
                                 {% endif %}
                             {% endif %}
                         </div>
                     {% endfor %}
-                </div>
-            {% else %}
-                <div class="no-comments">
-                    <p>No comments yet. Be the first to comment!</p>
-                </div>
-            {% endif %}
+                {% else %}
+                    <div class="no-comments" id="no-comments">
+                        <p>No comments yet. Be the first to comment!</p>
+                    </div>
+                {% endif %}
+            </div>
 
             <!-- ФОРМА ДОДАВАННЯ КОМЕНТАРЯ -->
             {% if user.is_authenticated %}
                 <div class="add-comment">
                     <h3>Add a Comment</h3>
-                    <form method="post" action="{% url 'forums:add_comment' forum.id topic.id %}">
+                    <form id="add-comment-form">
                         {% csrf_token %}
-
                         <div class="form-field">
-                            {{ comment_form.content }}
-                            {% if comment_form.content.errors %}
-                                <div class="field-error">
-                                    {% for error in comment_form.content.errors %}
-                                        <p class="error-message">{{ error }}</p>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                            <textarea name="content" placeholder="Write your comment..." required class="comment-textarea"></textarea>
+                            <div class="form-errors" id="form-errors" style="display: none;"></div>
                         </div>
-
-                        <button type="submit" class="submit">Post Comment</button>
+                        <button type="submit" class="submit" id="submit-btn">Post Comment</button>
                     </form>
                 </div>
             {% else %}
@@ -106,4 +96,306 @@
             <a href="{% url 'forums:forum_detail' forum.id %}">Back to {{ forum.title }}</a>
         </div>
     </div>
+
+    <script>
+    document.getElementById('add-comment-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitBtn = document.getElementById('submit-btn');
+        const originalText = submitBtn.textContent;
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Posting...';
+        
+        fetch('{% url "forums:add_comment_ajax" forum.id topic.id %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const noComments = document.getElementById('no-comments');
+                if (noComments) {
+                    noComments.style.display = 'none';
+                }
+                
+                const commentsList = document.getElementById('comments-list');
+                commentsList.insertAdjacentHTML('beforeend', data.comment_html);
+                const addedComments = commentsList.querySelectorAll('.comment-item');
+                const lastComment = addedComments[addedComments.length - 1];
+
+                if (lastComment) {
+                    lastComment.scrollIntoView({ behavior: 'smooth' });
+}
+                document.getElementById('comment-count').textContent = data.comment_count;
+                
+                this.reset();
+                
+                //showMessage('Comment added successfully!', 'success');
+            } else {
+                showFormErrors(data.errors);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('Error adding comment', 'error');
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        });
+    });
+
+    function deleteComment(commentId) {
+        if (!confirm('Are you sure you want to delete this comment?')) {
+            return;
+        }
+        
+        fetch(`{% url "forums:delete_comment_ajax" forum.id topic.id 0 %}`.replace('0', commentId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
+                commentElement.remove();
+                
+                document.getElementById('comment-count').textContent = data.comment_count;
+                
+                if (data.comment_count === 0) {
+                    document.getElementById('comments-list').innerHTML = `
+                        <div class="no-comments" id="no-comments">
+                            <p>No comments yet. Be the first to comment!</p>
+                        </div>
+                    `;
+                }
+                
+                //showMessage('Comment deleted successfully!', 'success');
+            } else {
+                showMessage(data.error || 'Error deleting comment', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('Error deleting comment', 'error');
+        });
+    }
+
+    function editComment(commentId) {
+        const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
+        const textDiv = commentElement.querySelector('.comment-text');
+        const textarea = commentElement.querySelector('.comment-edit-input');
+        const editBtn = commentElement.querySelector('.edit-btn');
+        const saveBtn = commentElement.querySelector('.save-btn');
+        const cancelBtn = commentElement.querySelector('.cancel-btn');
+        
+        textDiv.style.display = 'none';
+        textarea.style.display = 'block';
+        textarea.focus();
+        
+        editBtn.style.display = 'none';
+        saveBtn.style.display = 'inline';
+        cancelBtn.style.display = 'inline';
+    }
+
+    function saveComment(commentId) {
+        const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
+        const textarea = commentElement.querySelector('.comment-edit-input');
+        const newContent = textarea.value.trim();
+        
+        if (!newContent) {
+            showMessage('Comment cannot be empty', 'error');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('content', newContent);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        fetch(`{% url "forums:edit_comment_ajax" forum.id topic.id 0 %}`.replace('0', commentId), {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const textDiv = commentElement.querySelector('.comment-text');
+                textDiv.innerHTML = data.content.replace(/\n/g, '<br>');
+                
+                textarea.style.display = 'none';
+                textDiv.style.display = 'block';
+                
+                resetEditButtons(commentElement);
+                
+                //showMessage('Comment updated successfully!', 'success');
+            } else {
+                showMessage('Error updating comment', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('Error updating comment', 'error');
+        });
+    }
+
+    function cancelEdit(commentId) {
+        const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
+        const textDiv = commentElement.querySelector('.comment-text');
+        const textarea = commentElement.querySelector('.comment-edit-input');
+        
+        textarea.value = textarea.defaultValue;
+        
+        textarea.style.display = 'none';
+        textDiv.style.display = 'block';
+        
+        resetEditButtons(commentElement);
+    }
+
+    function resetEditButtons(commentElement) {
+        const editBtn = commentElement.querySelector('.edit-btn');
+        const saveBtn = commentElement.querySelector('.save-btn');
+        const cancelBtn = commentElement.querySelector('.cancel-btn');
+        
+        editBtn.style.display = 'inline';
+        saveBtn.style.display = 'none';
+        cancelBtn.style.display = 'none';
+    }
+
+    function showMessage(message, type) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.textContent = message;
+        messageDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            ${type === 'success' ? 'background-color: #28a745;' : 'background-color: #dc3545;'}
+        `;
+        
+        document.body.appendChild(messageDiv);
+        
+        setTimeout(() => {
+            messageDiv.remove();
+        }, 3000);
+    }
+
+    function showFormErrors(errors) {
+        const errorsDiv = document.getElementById('form-errors');
+        let errorHtml = '';
+        
+        for (const field in errors) {
+            errors[field].forEach(error => {
+                errorHtml += `<p class="error-message">${error}</p>`;
+            });
+        }
+        
+        errorsDiv.innerHTML = errorHtml;
+        errorsDiv.style.display = errorHtml ? 'block' : 'none';
+    }
+
+    function toggleComment(button) {
+        const commentContent = button.parentElement;
+        const textDiv = commentContent.querySelector('.collapsible-content');
+
+        textDiv.classList.toggle('expanded');
+        commentContent.classList.toggle('expanded');
+    }
+
+    document.querySelectorAll('.comment-content').forEach(comment => {
+        const textDiv = comment.querySelector('.collapsible-content');
+        const toggleBtn = comment.querySelector('.toggle-expand');
+
+        if (textDiv.scrollHeight > 160) {
+            toggleBtn.style.display = 'inline';
+        }
+    });
+
+    </script>
+
+    <style>
+    .comment-edit-input {
+        width: 100%;
+        min-height: 80px;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: inherit;
+        resize: vertical;
+    }
+    
+    .comment-textarea {
+        width: 100%;
+        min-height: 100px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: inherit;
+        resize: vertical;
+    }
+    
+    .form-errors {
+        margin-top: 10px;
+    }
+    
+    .error-message {
+        color: #dc3545;
+        margin: 5px 0;
+        font-size: 14px;
+    }
+    
+    .btn-link {
+        background: none;
+        border: none;
+        color: #007bff;
+        cursor: pointer;
+        text-decoration: underline;
+        font-size: 14px;
+        margin-right: 10px;
+    }
+    
+    .btn-link:hover {
+        color: #0056b3;
+    }
+    
+    .submit:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    .collapsible-content {
+    max-height: 150px;
+    overflow: hidden;
+    position: relative;
+    }
+
+    .collapsible-content.expanded {
+        max-height: none;
+    }
+
+    .toggle-expand {
+        display: none;
+        margin-top: 5px;
+        font-size: 13px;
+    }
+
+    .comment-content.expanded .toggle-expand::after {
+        content: "Show less";
+    }
+
+    .comment-content .toggle-expand::after {
+        content: "Show more";
+    }
+
+    </style>
 {% endblock %}
