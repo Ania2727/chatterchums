@@ -1,10 +1,13 @@
 import json
+
+from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import HttpResponseForbidden
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Count, Max
+from django.views.decorators.http import require_POST
 from forums.forms import *
 from forums.models import *
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -72,6 +75,7 @@ def forum_detail(request, forum_id):
         'forum': forum,
         'topics': topics,
         'is_member': is_member,
+        'complaint_reasons': Complaint.COMPLAINT_REASONS,
     })
 
 
@@ -212,7 +216,7 @@ def home(request):
 @login_required
 def delete_comment(request, forum_id, topic_id, comment_id):
     comment = get_object_or_404(Comment, id=comment_id, topic_id=topic_id)
-    
+
     if request.user == comment.author or (hasattr(request.user, 'is_forum_moderator') and request.user.is_forum_moderator()):
         if request.method == 'POST':
             comment.delete()
@@ -227,11 +231,11 @@ def add_comment_ajax(request, forum_id, topic_id):
     if request.method == 'POST':
         forum = get_object_or_404(Forum, id=forum_id)
         topic = get_object_or_404(Topic, id=topic_id, forum=forum)
-        
+
         form = CommentForm(request.POST, user=request.user, topic=topic)
         if form.is_valid():
             comment = form.save()
-            
+
             # Render comment HTML
             comment_html = render_to_string('partials/comment_item.html', {
                 'comment': comment,
@@ -239,7 +243,7 @@ def add_comment_ajax(request, forum_id, topic_id):
                 'forum': forum,
                 'topic': topic
             })
-            
+
             return JsonResponse({
                 'success': True,
                 'comment_html': comment_html,
@@ -250,18 +254,18 @@ def add_comment_ajax(request, forum_id, topic_id):
                 'success': False,
                 'errors': form.errors
             })
-    
+
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 @login_required
 def delete_comment_ajax(request, forum_id, topic_id, comment_id):
     if request.method == 'POST':
         comment = get_object_or_404(Comment, id=comment_id, topic_id=topic_id)
-        
+
         if request.user == comment.author or (hasattr(request.user, 'is_forum_moderator') and request.user.is_forum_moderator()):
             comment.delete()
             topic = get_object_or_404(Topic, id=topic_id)
-            
+
             return JsonResponse({
                 'success': True,
                 'comment_count': topic.comments.count()
@@ -271,16 +275,16 @@ def delete_comment_ajax(request, forum_id, topic_id, comment_id):
                 'success': False,
                 'error': 'Permission denied'
             })
-    
+
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 @login_required
 def edit_comment_ajax(request, forum_id, topic_id, comment_id):
     comment = get_object_or_404(Comment, id=comment_id, topic_id=topic_id)
-    
+
     if comment.author != request.user:
         return JsonResponse({'success': False, 'error': 'Permission denied'})
-    
+
     if request.method == 'POST':
         form = CommentForm(request.POST, instance=comment, user=request.user, topic=comment.topic)
         if form.is_valid():
@@ -294,7 +298,7 @@ def edit_comment_ajax(request, forum_id, topic_id, comment_id):
                 'success': False,
                 'errors': form.errors
             })
-    
+
     return JsonResponse({'success': False, 'error': 'Invalid request'})
 
 @login_required
@@ -327,3 +331,70 @@ def delete_forum(request, forum_id):
         return redirect('forums:forum_list')
 
     return render(request, 'confirm_delete_forum.html', {'forum': forum})
+
+#@require_POST
+@login_required
+def submit_complaint_ajax(request):
+    user = request.user
+    complaint_text = request.POST.get('complaint_text', '').strip()
+    complaint_type = request.POST.get('complaint_type')
+    target_type = request.POST.get('target_type')
+    target_id = request.POST.get('target_id')
+
+    if not complaint_text or not complaint_type or not target_type or not target_id:
+        return JsonResponse({'success': False, 'error': 'Missing required fields.'})
+
+    kwargs = {
+        'author': user,
+        'complaint_text': complaint_text,
+        'complaint_type': complaint_type,
+        'status': 'pending',
+    }
+
+    try:
+        if target_type == 'topic':
+            from .models import Topic
+            kwargs['topic_target'] = Topic.objects.get(pk=target_id)
+        elif target_type == 'comment':
+            from .models import Comment
+            kwargs['comment_target'] = Comment.objects.get(pk=target_id)
+        elif target_type == 'forum':
+            kwargs['forum_target'] = Forum.objects.get(pk=target_id)
+        elif target_type == 'user':
+            from django.contrib.auth.models import User
+            kwargs['user_target'] = User.objects.get(pk=target_id)
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid target type.'})
+
+        complaint = Complaint(**kwargs)
+        complaint.full_clean()  # <- валідатор (перевіряє, що тільки одна ціль задана)
+        complaint.save()
+
+        return JsonResponse({'success': True})
+
+    except ObjectDoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Target does not exist.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def report_forum(request, forum_id):
+    if request.method == 'POST':
+        forum = get_object_or_404(Forum, id=forum_id)
+        text = request.POST.get('complaint_text', '').strip()
+        reason = request.POST.get('complaint_type')
+
+        if not text or reason not in dict(Complaint.COMPLAINT_REASONS):
+            messages.error(request, "Please provide valid reason and description.")
+            return redirect('forums:forum_detail', forum_id=forum.id)
+
+        Complaint.objects.create(
+            author=request.user,
+            complaint_text=text,
+            complaint_type=reason,
+            forum_target=forum
+        )
+        messages.success(request, "Thanks! Your complaint has been submitted.")
+        return redirect('forums:forum_detail', forum_id=forum.id)
+
+    return redirect('forums:forum_list')

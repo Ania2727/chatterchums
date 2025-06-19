@@ -31,4 +31,6 @@ urlpatterns = [
     path('password/', change_password, name='change_password'),
     path('password/done/', change_password_done, name='change_password_done'),
     path('forum-statistics', forum_statistics, name='forum_statistics'),
+    path('admin-panel/complaints/', admin_complaints_view, name='admin_complaints'),
+
 ]

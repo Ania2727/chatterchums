@@ -698,3 +698,12 @@ def forum_statistics(request):
         "registration_data": registration_data,
         "top_forums": top_forums,
     })
+
+@login_required
+def admin_complaints_view(request):
+    complaints = Complaint.objects.select_related(
+        'author', 'user_target', 'forum_target', 'topic_target', 'comment_target'
+    ).order_by('-complaint_time')
+    return render(request, 'admin/complaints.html', {
+        'complaints': complaints
+    })

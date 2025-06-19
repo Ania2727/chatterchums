@@ -27,4 +27,9 @@ urlpatterns = [
 
     path('forums/<int:forum_id>/edit/', views.edit_forum, name='edit_forum'),
     path('forums/<int:forum_id>/delete/', views.delete_forum, name='delete_forum'),
+
+    path('complaints/submit/', views.submit_complaint_ajax, name='submit_complaint_ajax'),
+    path('<int:forum_id>/report/', views.report_forum, name='report_forum'),
+
+
 ]

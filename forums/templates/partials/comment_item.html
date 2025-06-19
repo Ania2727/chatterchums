@@ -10,18 +10,34 @@
     </div>
 
     {% if user.is_authenticated %}
-        {% if user == comment.author or user.is_forum_moderator %}
-            <div class="comment-actions">
-                {% if user == comment.author %}
-                    <button onclick="editComment({{ comment.id }})" class="btn-link edit-btn">Edit</button>
-                    <button onclick="saveComment({{ comment.id }})" class="btn-link save-btn" style="display: none;">Save</button>
-                    <button onclick="cancelEdit({{ comment.id }})" class="btn-link cancel-btn" style="display: none;">Cancel</button>
-                {% endif %}
-                
+
+        <div class="comment-actions">
+            {% if user == comment.author %}
+                <button onclick="editComment({{ comment.id }})" class="btn-link edit-btn">Edit</button>
+                <button onclick="saveComment({{ comment.id }})" class="btn-link save-btn" style="display: none;">Save</button>
+                <button onclick="cancelEdit({{ comment.id }})" class="btn-link cancel-btn" style="display: none;">Cancel</button>
+            {% endif %}
+
+            {% if user == comment.author or user.is_forum_moderator %}
                 <button onclick="deleteComment({{ comment.id }})" class="btn-link delete-btn">
                     Delete{% if user.is_forum_moderator and user != comment.author %} (Moderator){% endif %}
                 </button>
-            </div>
-        {% endif %}
+            {% endif %}
+            <button class="btn-link report-toggle-btn" onclick="toggleReport({{ comment.id }})">Report</button>
+
+        </div>
+
+        <div class="comment-report-form" id="report-form-{{ comment.id }}" style="display: none;">
+            <textarea class="report-textarea" placeholder="Why are you reporting this comment?" maxlength="256"></textarea>
+            <select class="report-type">
+                <option value="hate_speech">Hate speech</option>
+                <option value="spam">Spam</option>
+                <option value="offensive">Offensive</option>
+                <option value="harassment">Harassment</option>
+                <option value="other">Other</option>
+            </select>
+            <button class="btn-link" onclick="submitReport({{ comment.id }}, 'comment')">Submit</button>
+            <button class="btn-link" onclick="toggleReport({{ comment.id }})">Cancel</button>
+        </div>
     {% endif %}
 </div>

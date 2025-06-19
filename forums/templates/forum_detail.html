@@ -16,6 +16,8 @@
                     <span class="date">Created on: {{ forum.date_posted|date:"F j, Y" }}</span>
                 </div>
 
+
+
                 {% if forum.tags.all %}
                     <div class="forum-tags">
                         {% for tag in forum.tags.all %}
@@ -29,7 +31,9 @@
                         <a href="{{ forum.link }}" target="_blank" rel="noopener noreferrer">Visit external resource</a>
                     </div>
                 {% endif %}
+
             </div>
+
         </div>
 
         <div class="forum-actions">
@@ -40,7 +44,7 @@
                 <a href="{% url 'forums:join_forum' forum.id %}" class="btn btn-primary">Join Forum</a>
             {% endif %}
             <a href="{% url 'forums:forum_list' %}" class="btn btn-secondary">Back to Forums</a>
-            
+
             {% if user.is_authenticated and user.is_forum_admin %}
                 <div class="admin-actions">
                     <a href="{% url 'forums:edit_forum' forum.id %}" class="btn btn-warning">Edit Forum</a>
@@ -50,7 +54,108 @@
                     </form>
                 </div>
             {% endif %}
+
         </div>
+        {% if user.is_authenticated %}
+            <div class="report-forum-wrapper">
+                <a href="#" id="report-toggle" class="report-link">Report Forum</a>
+
+                <form id="report-form" method="post" action="{% url 'forums:report_forum' forum.id %}" style="display: none;">
+                    {% csrf_token %}
+                    <div class="report-form-grid">
+                        <textarea name="complaint_text" placeholder="Why are you reporting this forum?" required></textarea>
+                        <select name="complaint_type" required>
+                            {% for key, value in complaint_reasons %}
+                                <option value="{{ key }}">{{ value }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="report-buttons">
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                            <a href="#" id="report-cancel" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <style>
+                .report-forum-wrapper {
+                    margin-top: 1rem;
+                }
+
+                .report-link {
+                    color: #ff7a2f;
+                    text-decoration: underline;
+                    cursor: pointer;
+                }
+
+                .report-form-grid {
+                    margin-top: 0.5rem;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.5rem;
+                    max-width: 400px;
+                }
+
+                .report-form-grid textarea {
+                    resize: vertical;
+                    min-height: 60px;
+                    padding: 0.5rem;
+                    font-size: 14px;
+                    border-radius: 10px;
+                    border: 1px solid #ccc;
+                }
+
+                .report-form-grid select {
+                    padding: 0.4rem;
+                    font-size: 14px;
+                    border-radius: 10px;
+                    border: 1px solid #ccc;
+                }
+
+                .report-buttons {
+                    display: flex;
+                    gap: 0.5rem;
+                }
+
+                .btn.btn-primary {
+                    background-color: #ff7a2f;
+                    color: white;
+                    border: none;
+                    border-radius: 20px;
+                    padding: 0.4rem 1rem;
+                    cursor: pointer;
+                }
+
+                .btn.btn-secondary {
+                    background-color: #d6d6d6;
+                    color: #333;
+                    border: none;
+                    border-radius: 20px;
+                    padding: 0.4rem 1rem;
+                    cursor: pointer;
+                    text-decoration: none;
+                }
+
+                .btn.btn-primary:hover,
+                .btn.btn-secondary:hover {
+                    opacity: 0.9;
+                }
+            </style>
+
+            <script>
+                document.getElementById('report-toggle').addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.getElementById('report-form').style.display = 'block';
+                    this.style.display = 'none';
+                });
+
+                document.getElementById('report-cancel').addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.getElementById('report-form').style.display = 'none';
+                    document.getElementById('report-toggle').style.display = 'inline';
+                });
+            </script>
+        {% endif %}
 
         <div class="topics-container">
             <h2 class="section-title">Topics</h2>
@@ -100,3 +205,4 @@
         </div>
     </div>
 {% endblock %}
+

@@ -49,20 +49,36 @@
                             </div>
 
                             {% if user.is_authenticated %}
-                                {% if user == comment.author or user.is_forum_moderator %}
-                                    <div class="comment-actions">
-                                        {% if user == comment.author %}
-                                            <button onclick="editComment({{ comment.id }})" class="btn-link edit-btn">Edit</button>
-                                            <button onclick="saveComment({{ comment.id }})" class="btn-link save-btn" style="display: none;">Save</button>
-                                            <button onclick="cancelEdit({{ comment.id }})" class="btn-link cancel-btn" style="display: none;">Cancel</button>
-                                        {% endif %}
-                                        
-                                        <button onclick="deleteComment({{ comment.id }})" class="btn-link delete-btn">
-                                            Delete{% if user.is_forum_moderator and user != comment.author %} (Moderator){% endif %}
-                                        </button>
-                                    </div>
-                                {% endif %}
-                            {% endif %}
+
+        <div class="comment-actions">
+            {% if user == comment.author %}
+                <button onclick="editComment({{ comment.id }})" class="btn-link edit-btn">Edit</button>
+                <button onclick="saveComment({{ comment.id }})" class="btn-link save-btn" style="display: none;">Save</button>
+                <button onclick="cancelEdit({{ comment.id }})" class="btn-link cancel-btn" style="display: none;">Cancel</button>
+            {% endif %}
+
+            {% if user == comment.author or user.is_forum_moderator %}
+                <button onclick="deleteComment({{ comment.id }})" class="btn-link delete-btn">
+                    Delete{% if user.is_forum_moderator and user != comment.author %} (Moderator){% endif %}
+                </button>
+            {% endif %}
+            <button class="btn-link report-toggle-btn" onclick="toggleReport({{ comment.id }})">Report</button>
+
+        </div>
+
+        <div class="comment-report-form" id="report-form-{{ comment.id }}" style="display: none;">
+            <textarea class="report-textarea" placeholder="Why are you reporting this comment?" maxlength="256"></textarea>
+            <select class="report-type">
+                <option value="hate_speech">Hate speech</option>
+                <option value="spam">Spam</option>
+                <option value="offensive">Offensive</option>
+                <option value="harassment">Harassment</option>
+                <option value="other">Other</option>
+            </select>
+            <button class="btn-link" onclick="submitReport({{ comment.id }}, 'comment')">Submit</button>
+            <button class="btn-link" onclick="toggleReport({{ comment.id }})">Cancel</button>
+        </div>
+    {% endif %}
                         </div>
                     {% endfor %}
                 {% else %}
@@ -85,6 +101,26 @@
                         <button type="submit" class="submit" id="submit-btn">Post Comment</button>
                     </form>
                 </div>
+    <div class="report-topic-container">
+    <button class="btn-link report-toggle-btn" onclick="toggleTopicReport()">Report Topic</button>
+
+    <div id="topic-report-form" class="inline-report-form" style="display: none;">
+        <textarea class="report-textarea" placeholder="Why are you reporting this topic?" maxlength="256"></textarea>
+
+        <div class="report-form-row">
+            <select class="report-type">
+                <option value="hate_speech">Hate speech</option>
+                <option value="spam">Spam</option>
+                <option value="offensive">Offensive</option>
+                <option value="harassment">Harassment</option>
+                <option value="other">Other</option>
+            </select>
+            <button class="btn-link" onclick="submitReport({{ topic.id }}, 'topic')">Submit</button>
+            <button class="btn-link" onclick="toggleTopicReport()">Cancel</button>
+        </div>
+    </div>
+</div>
+
             {% else %}
                 <div class="login-to-comment">
                     <p>Please <a href="{% url 'users:login' %}">log in</a> to comment.</p>
@@ -305,6 +341,61 @@
         errorsDiv.style.display = errorHtml ? 'block' : 'none';
     }
 
+    function toggleReport(commentId) {
+        const form = document.getElementById(`report-form-${commentId}`);
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function toggleTopicReport() {
+        const form = document.getElementById('topic-report-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function submitReport(targetId, targetType) {
+        let formElement;
+        if (targetType === 'topic') {
+            formElement = document.getElementById('topic-report-form');
+        } else {
+            formElement = document.getElementById(`report-form-${targetId}`);
+        }
+
+        const textarea = formElement.querySelector('.report-textarea');
+        const typeSelect = formElement.querySelector('.report-type');
+        const text = textarea.value.trim();
+        const complaintType = typeSelect.value;
+
+        if (!text) {
+            showMessage('Please provide a reason for your complaint.', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('complaint_text', text);
+        formData.append('complaint_type', complaintType);
+        formData.append('target_type', targetType);
+        formData.append('target_id', targetId);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        fetch("{% url 'forums:submit_complaint_ajax' %}", {
+            method: 'POST',
+            body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                formElement.style.display = 'none';
+                textarea.value = '';
+                showMessage('Complaint submitted successfully.', 'success');
+            } else {
+                showMessage(data.error || 'Error submitting complaint.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('Server error during complaint submission.', 'error');
+        });
+    }
+
     function toggleComment(button) {
         const commentContent = button.parentElement;
         const textDiv = commentContent.querySelector('.collapsible-content');
@@ -396,6 +487,71 @@
     .comment-content .toggle-expand::after {
         content: "Show more";
     }
+
+    .inline-report-form {
+        margin-top: 8px;
+    }
+
+    .report-textarea {
+        width: 100%;
+        min-height: 70px;
+        padding: 6px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        resize: vertical;
+        font-family: inherit;
+        margin-bottom: 4px;
+    }
+
+    .report-topic-container {
+    margin-top: 25px;
+    max-width: 600px;
+}
+
+.report-topic-container {
+    margin-top: 30px;
+    padding: 0 16px; /* горизонтальний відступ від країв сторінки */
+}
+
+.inline-report-form {
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    padding: 16px; /* внутрішній відступ */
+    border-radius: 10px;
+    margin-top: 10px;
+    max-width: 600px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.report-textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    margin-bottom: 14px;
+    box-sizing: border-box;
+}
+
+.report-form-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.report-type {
+    padding: 6px 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    height: 36px;
+    box-sizing: border-box;
+}
 
     </style>
 {% endblock %}

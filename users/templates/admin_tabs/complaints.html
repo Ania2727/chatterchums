@@ -1,44 +1,40 @@
 <h2>User Complaints</h2>
 
 <div class="complaints-list">
-    <!-- Sample complaint - replace with real data -->
-    <div class="complaint-item">
-        <div class="complaint-header">
-            <span class="complaint-id">#001</span>
-            <span class="complaint-type">Spam</span>
-            <span class="complaint-date">2025-06-17</span>
-        </div>
-        <div class="complaint-details">
-            <p><strong>Reported user:</strong> username123</p>
-            <p><strong>Reported by:</strong> reporter456</p>
-            <p><strong>Reason:</strong> User is posting spam messages in multiple forums</p>
-            <p><strong>Content:</strong> "Click here for free money!!!"</p>
-        </div>
-        <div class="complaint-actions">
-            <button class="btn btn-success">Ignore</button>
-            <button class="btn btn-warning">Delete Post</button>
-            <button class="btn btn-danger">Ban User</button>
-        </div>
-    </div>
+    {% for complaint in complaints %}
+        <div class="complaint-item">
+            <div class="complaint-header">
+                <span class="complaint-id">#{{ complaint.id|stringformat:"03d" }}</span>
+                <span class="complaint-type">{{ complaint.get_complaint_type_display }}</span>
+                <span class="complaint-date">{{ complaint.complaint_time|date:"Y-m-d" }}</span>
+            </div>
+            <div class="complaint-details">
+                <p><strong>Reported by:</strong> {{ complaint.author.username }}</p>
 
-    <div class="complaint-item">
-        <div class="complaint-header">
-            <span class="complaint-id">#002</span>
-            <span class="complaint-type">Inappropriate Content</span>
-            <span class="complaint-date">2025-06-16</span>
+                <p><strong>Target:</strong>
+                    {% if complaint.user_target %}
+                        User: {{ complaint.user_target.username }}
+                    {% elif complaint.forum_target %}
+                        Forum: <a href="{% url 'forums:forum_detail' complaint.forum_target.id %}">{{ complaint.forum_target.title }}</a>
+                    {% elif complaint.topic_target %}
+                        Topic: <a href="{% url 'forums:topic_detail' complaint.topic_target.forum.id complaint.topic_target.id %}">{{ complaint.topic_target.title }}</a>
+                    {% elif complaint.comment_target %}
+                        Comment by {{ complaint.comment_target.author.username }}
+                    {% endif %}
+                </p>
+
+                <p><strong>Reason:</strong> {{ complaint.get_complaint_type_display }}</p>
+                <p><strong>Content:</strong> "{{ complaint.complaint_text }}"</p>
+            </div>
+            <div class="complaint-actions">
+                <button class="btn btn-success">Ignore</button>
+                <button class="btn btn-warning">Delete Post</button>
+                <button class="btn btn-danger">Ban User</button>
+            </div>
         </div>
-        <div class="complaint-details">
-            <p><strong>Reported user:</strong> baduser789</p>
-            <p><strong>Reported by:</strong> concerned_user</p>
-            <p><strong>Reason:</strong> Posting inappropriate images</p>
-            <p><strong>Content:</strong> [Image content flagged]</p>
-        </div>
-        <div class="complaint-actions">
-            <button class="btn btn-success">Ignore</button>
-            <button class="btn btn-warning">Delete Post</button>
-            <button class="btn btn-danger">Ban User</button>
-        </div>
-    </div>
+    {% empty %}
+        <p>No complaints submitted yet.</p>
+    {% endfor %}
 </div>
 
 <style>
