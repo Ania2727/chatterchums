@@ -10,8 +10,14 @@ from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.http import JsonResponse
 from forums.models import Forum, Topic, Comment, Tag
 from django.contrib.auth.models import User, Group
-from django.db.models import Q
+from django.db.models import Q, Count
 from .forms import CustomUserCreationForm, CustomAuthenticationForm, UserProfileForm, UserForm
+from django.contrib.admin.views.decorators import staff_member_required
+from django.utils import timezone
+from datetime import datetime, timedelta
+from django.db.models.functions import TruncMonth
+import calendar
+
 
 logger = logging.getLogger(__name__)
 
@@ -603,3 +609,92 @@ def change_password(request):
 @login_required
 def change_password_done(request):
     return render(request, 'change_password_done.html')
+
+@login_required
+def forum_statistics(request):
+    today = timezone.now()
+    thirty_days_ago = today - timedelta(days=30)
+
+    total_users = User.objects.count()
+    total_forums = Forum.objects.count()
+    total_topics = Topic.objects.count()
+    total_comments = Comment.objects.count()
+
+    active_users_30_days = User.objects.filter(
+        last_login__gte=thirty_days_ago
+    ).count()
+
+    first_day_of_month = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    new_users_this_month = User.objects.filter(
+        date_joined__gte=first_day_of_month
+    ).count()
+
+    today_start = today.replace(hour=0, minute=0, second=0, microsecond=0)
+    topics_today = Topic.objects.filter(created_at__gte=today_start).count()
+    comments_today = Comment.objects.filter(created_at__gte=today_start).count()
+    posts_today = topics_today + comments_today
+
+    twelve_months_ago = today - timedelta(days=365)
+    registration_stats = User.objects.filter(
+        date_joined__gte=twelve_months_ago
+    ).annotate(
+        month=TruncMonth('date_joined')
+    ).values('month').annotate(
+        count=Count('id')
+    ).order_by('month')
+
+    registration_months = []
+    registration_data = []
+    
+    for i in range(12):
+        month_date = (today.replace(day=1) - timedelta(days=30*i)).replace(day=1)
+        registration_months.insert(0, month_date.strftime("%b %Y"))
+        
+        month_count = 0
+        for stat in registration_stats:
+            if stat['month'].year == month_date.year and stat['month'].month == month_date.month:
+                month_count = stat['count']
+                break
+        registration_data.insert(0, month_count)
+
+    raw_top_forums = Forum.objects.annotate(
+        topic_count=Count('topics'),
+        total_comments=Count('topics__comments')
+    ).order_by('-topic_count', '-total_comments')[:5]
+
+    max_activity = max(
+        [(f.topic_count + f.total_comments) for f in raw_top_forums], 
+        default=1
+    )
+
+    top_forums = []
+    for forum in raw_top_forums:
+        total_activity = forum.topic_count + forum.total_comments
+        top_forums.append({
+            "name": forum.title,
+            "topic_count": forum.topic_count,
+            "total_comments": forum.total_comments,
+            "activity_percentage": round((total_activity / max_activity * 100), 1)
+        })
+
+    most_active_forum = top_forums[0] if top_forums else {
+        "name": "N/A",
+        "topic_count": 0
+    }
+
+    return JsonResponse({
+        "total_users": total_users,
+        "total_forums": total_forums,
+        "total_topics": total_topics,
+        "total_comments": total_comments,
+        "active_users_30_days": active_users_30_days,
+        "new_users_this_month": new_users_this_month,
+        "posts_today": posts_today,
+        "most_active_forum": {
+            "name": most_active_forum["name"],
+            "topic_count": most_active_forum["topic_count"]
+        },
+        "registration_months": registration_months,
+        "registration_data": registration_data,
+        "top_forums": top_forums,
+    })

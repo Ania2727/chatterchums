@@ -15,7 +15,7 @@ class Tag(models.Model):
 
 class Forum(models.Model):
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_forums', default=None)
-    #name = models.CharField(max_length=50, default="Anonymous")
+    name = models.CharField(max_length=50, default="Anonymous")
     link = models.CharField(max_length=100, null=True, blank=True)
     date_posted = models.DateTimeField(auto_now_add=True, null=True)
     title = models.CharField(max_length=250)
