@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Delete Forum - ChatterChums{% endblock %}
+{% block content %}
+    <div class="form-container">
+        <h1 class="form-title">Confirm Delete</h1>
+        <p>Are you sure you want to delete the forum: <strong>{{ forum.title }}</strong>?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Yes, Delete</button>
+            <a href="{% url 'forums:forum_detail' forum.id %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+{% endblock %}

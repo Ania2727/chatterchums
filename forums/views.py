@@ -296,3 +296,34 @@ def edit_comment_ajax(request, forum_id, topic_id, comment_id):
             })
     
     return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+@login_required
+def edit_forum(request, forum_id):
+    forum = get_object_or_404(Forum, id=forum_id)
+    if not request.user.is_forum_admin():
+        return HttpResponseForbidden("You don't have permission to edit this forum.")
+
+    if request.method == 'POST':
+        form = CreateInForum(request.POST, instance=forum, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Forum updated successfully!')
+            return redirect('forums:forum_detail', forum_id=forum.id)
+    else:
+        form = CreateInForum(instance=forum, user=request.user)
+
+    return render(request, 'edit_forum.html', {'form': form, 'forum': forum})
+
+
+@login_required
+def delete_forum(request, forum_id):
+    forum = get_object_or_404(Forum, id=forum_id)
+    if not request.user.is_forum_admin():
+        return HttpResponseForbidden("You don't have permission to delete this forum.")
+
+    if request.method == 'POST':
+        forum.delete()
+        messages.success(request, 'Forum deleted successfully!')
+        return redirect('forums:forum_list')
+
+    return render(request, 'confirm_delete_forum.html', {'forum': forum})

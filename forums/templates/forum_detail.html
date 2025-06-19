@@ -40,6 +40,16 @@
                 <a href="{% url 'forums:join_forum' forum.id %}" class="btn btn-primary">Join Forum</a>
             {% endif %}
             <a href="{% url 'forums:forum_list' %}" class="btn btn-secondary">Back to Forums</a>
+            
+            {% if user.is_authenticated and user.is_forum_admin %}
+                <div class="admin-actions">
+                    <a href="{% url 'forums:edit_forum' forum.id %}" class="btn btn-warning">Edit Forum</a>
+                    <form method="post" action="{% url 'forums:delete_forum' forum.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this forum?');">Delete Forum</button>
+                    </form>
+                </div>
+            {% endif %}
         </div>
 
         <div class="topics-container">
