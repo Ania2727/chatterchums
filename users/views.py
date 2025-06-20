@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.http import JsonResponse
-from forums.models import Forum, Topic, Comment, Tag
+from forums.models import Forum, Topic, Comment, Tag, Complaint
 from django.contrib.auth.models import User, Group
 from django.db.models import Q, Count
 from .forms import CustomUserCreationForm, CustomAuthenticationForm, UserProfileForm, UserForm
@@ -703,7 +703,8 @@ def forum_statistics(request):
 @login_required
 def admin_complaints_view(request):
     complaints = Complaint.objects.select_related(
-        'author', 'user_target', 'forum_target', 'topic_target', 'comment_target'
+        'author',
+        'user_target', 'forum_target', 'topic_target', 'comment_target'
     ).order_by('-complaint_time')
 
     result = []
@@ -727,8 +728,9 @@ def admin_complaints_view(request):
             'target': target,
             'reason': c.get_complaint_type_display(),
             'text': c.complaint_text,
+            'status': c.status,
+            'status_display': c.get_status_display(),
         })
-
     return JsonResponse({'complaints': result})
 
 @login_required
@@ -758,4 +760,13 @@ def unban_user(request, user_id):
         user_profile.ban_end_date = None
         user.save()
         return JsonResponse({'success': True, 'message': 'User unbanned successfully.'})
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'})
+
+@login_required
+def dismiss_complaint(request, complaint_id):
+    complaint = get_object_or_404(Complaint, id=complaint_id)
+    if request.method == 'POST':
+        complaint.status = 'dismissed'
+        complaint.save()
+        return JsonResponse({'success': True, 'message': 'Complaint dismissed successfully.'})
     return JsonResponse({'success': False, 'error': 'Invalid request method.'})

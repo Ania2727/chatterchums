@@ -7,6 +7,7 @@
                 <span class="complaint-id">#{{ complaint.id|stringformat:"03d" }}</span>
                 <span class="complaint-type">{{ complaint.get_complaint_type_display }}</span>
                 <span class="complaint-date">{{ complaint.complaint_time|date:"Y-m-d" }}</span>
+                <span class="complaint-details">{{ complaint.complaint_status_display }}</span>
             </div>
             <div class="complaint-details">
                 <p><strong>Reported by:</strong> {{ complaint.author.username }}</p>
@@ -38,7 +39,168 @@
     {% endfor %}
 </div>
 
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const complaintsList = document.querySelector('.complaints-list');
 
+        // Fetch complaints data from the server
+        fetch('/users/complaints', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.complaints) {
+                complaintsList.innerHTML = ''; // Clear existing content
+
+                data.complaints.forEach(complaint => {
+                    const complaintItem = document.createElement('div');
+                    complaintItem.classList.add('complaint-item');
+
+                    complaintItem.innerHTML = `
+                        <div class="complaint-header">
+                            <span class="complaint-id">#${complaint.id.toString().padStart(3, '0')}</span>
+                            <span class="complaint-type">${complaint.type}</span>
+                            <span class="complaint-date">${complaint.date}</span>
+                            <span class="complaint-id">${complaint.status}</span>
+                        </div>
+                        <div class="complaint-details">
+                            <p><strong>Reported by:</strong> ${complaint.author}</p>
+                            <p><strong>Target:</strong> ${complaint.target}</p>
+                            <p><strong>Reason:</strong> ${complaint.reason}</p>
+                            <p><strong>Content:</strong> "${complaint.text}"</p>
+                        </div>
+                        <div class="complaint-actions">
+                            <button class="btn btn-success" data-action="dismiss" data-id="${complaint.id}">Ignore</button>
+                            <button class="btn btn-warning" data-action="delete" data-id="${complaint.id}">Delete Post</button>
+                            <button class="btn btn-danger" data-action="ban" data-id="${complaint.id}">Ban User</button>
+                            <button class="btn btn-info" data-action="reviewed" data-id="${complaint.id}">Mark as Reviewed</button>
+                        </div>
+                    `;
+
+                    complaintsList.appendChild(complaintItem);
+                });
+
+                // Add event listeners for buttons
+                complaintsList.addEventListener('click', function (event) {
+                    const button = event.target;
+                    if (button.tagName === 'BUTTON') {
+                        const action = button.dataset.action;
+                        const complaintId = button.dataset.id;
+
+                        if (action === 'dismiss') {
+                            handleDismiss(complaintId, button);
+                        } else if (action === 'delete') {
+                            handleDelete(complaintId, button);
+                        } else if (action === 'ban') {
+                            handleBan(complaintId, button);
+                        } else if (action === 'reviewed') {
+                            handleReviewed(complaintId, button);
+                        }
+                    }
+                });
+            } else {
+                complaintsList.innerHTML = '<p>No complaints submitted yet.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching complaints:', error);
+        });
+
+       function handleDismiss(complaintId, button) {
+    fetch(`/users/complaints/${complaintId}/dismiss`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            button.closest('.complaint-item').remove();
+        } else {
+            console.error('Failed to dismiss complaint');
+        }
+    });
+}
+
+        function handleDelete(complaintId, button) {
+            fetch(`/users/complaints/${complaintId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    button.closest('.complaint-item').remove();
+                } else {
+                    console.error('Failed to delete target');
+                }
+            });
+        }
+
+        function handleBan(complaintId, button) {
+            // Open a dialog window for banning the user
+            const banDialog = document.createElement('div');
+            banDialog.classList.add('ban-dialog');
+            banDialog.innerHTML = `
+                <div class="dialog-content">
+                    <h3>Ban User</h3>
+                    <label for="ban-duration">Duration (months):</label>
+                    <input type="number" id="ban-duration" min="1" max="12">
+                    <button class="btn btn-danger" id="confirm-ban">Confirm</button>
+                    <button class="btn btn-secondary" id="cancel-ban">Cancel</button>
+                </div>
+            `;
+            document.body.appendChild(banDialog);
+
+            document.getElementById('confirm-ban').addEventListener('click', function () {
+                const duration = document.getElementById('ban-duration').value;
+                fetch(`/users/complaints/${complaintId}/ban`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ duration })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        button.closest('.complaint-item').remove();
+                        banDialog.remove();
+                    } else {
+                        console.error('Failed to ban user');
+                    }
+                });
+            });
+
+            document.getElementById('cancel-ban').addEventListener('click', function () {
+                banDialog.remove();
+            });
+        }
+
+        function handleReviewed(complaintId, button) {
+            fetch(`/users/complaints/${complaintId}/reviewed`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    button.closest('.complaint-item').remove();
+                } else {
+                    console.error('Failed to mark complaint as reviewed');
+                }
+            });
+        }
+    });
+</script>
 <style>
 .complaint-item {
     border: 1px solid #ddd;
