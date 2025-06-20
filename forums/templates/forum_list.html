@@ -4,47 +4,597 @@
 {% block title %}All Forums - ChatterChums{% endblock %}
 
 {% block content %}
-    <div class="forums-container">
-        <div class="forums-header">
-            <h1>Browse All Forums</h1>
-            {% if not user.userprofile.is_currently_banned %}
-                <a href="{% url 'forums:add_forum' %}" class="btn btn-primary">Create New Forum</a>
-            {% endif %}
-        </div>
+<div class="forums-container">
+    <div class="forums-header">
+        <h1>Browse All Forums</h1>
+        {% if not user.userprofile.is_currently_banned %}
+            <a href="{% url 'forums:add_forum' %}" class="btn btn-primary">Create New Forum</a>
+        {% endif %}
+    </div>
 
-        {% if forums %}
-            <div class="forums-list">
-                {% for forum in forums %}
-                    <a href="{% url 'forums:forum_detail' forum.id %}" class="forum-card-link">
-                        <div class="forum-card">
-                            <h3>{{ forum.title }}</h3>
-                            <p class="description">{{ forum.description }}</p>
-
-                            {% if forum.tags.all %}
-                            <div class="forum-tags">
-                                {% for tag in forum.tags.all %}
-                                    <span class="forum-tag">{{ tag.name }}</span>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-
-                            <div class="forum-meta">
-                                <span class="creator">Created by: {{ forum.creator.username }}</span>
-                                <span class="members">{{ forum.members.count }} members</span>
-                                <span class="topics">{{ forum.topic_count }} topics</span>
-                                {% if forum.last_activity %}
-                                    <span class="activity">Last active: {{ forum.last_activity|date:"F j, Y" }}</span>
-                                {% endif %}
-                            </div>
+    <!-- Пошук та фільтри -->
+    <div class="search-filters">
+        <form method="GET" class="search-form" id="search-form">
+            <div class="search-row">
+                <div class="search-input-group">
+                    <input type="text" 
+                           name="search" 
+                           value="{{ request.GET.search }}" 
+                           placeholder="Search forums by name or description..."
+                           class="search-input">
+                    <button type="submit" class="search-btn">
+                        <i class="search-icon">🔍</i>
+                    </button>
+                </div>
+                
+                <div class="filter-group">
+                    <div class="tags-filter-container">
+                        <label class="tags-filter-label">Filter by tags:</label>
+                        <div class="tags-checkboxes" id="tags-container">
+                            {% for tag in all_tags %}
+                                <label class="tag-checkbox-label">
+                                    <input type="checkbox" 
+                                           name="tag" 
+                                           value="{{ tag.id }}"
+                                           {% if tag.id in selected_tag_ids %}checked{% endif %}
+                                           onchange="updateTagsFilter()">
+                                    <span class="tag-checkbox-text">{{ tag.name }}</span>
+                                </label>
+                            {% endfor %}
                         </div>
-                    </a>
-                {% endfor %}
+                        <button type="button" class="toggle-tags-btn" onclick="toggleTagsContainer()" id="toggle-tags-button">
+                            <span id="tags-button-text">Show all tags</span>
+                            <span id="selected-tags-count" style="display: none;"></span>
+                            <span class="toggle-arrow">▼</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sort-group">
+                    <select name="sort" class="sort-filter" onchange="document.getElementById('search-form').submit()">
+                        <option value="last_activity" {% if request.GET.sort == 'last_activity' or not request.GET.sort %}selected{% endif %}>
+                            Last Activity
+                        </option>
+                        <option value="newest" {% if request.GET.sort == 'newest' %}selected{% endif %}>
+                            Newest first
+                        </option>
+                        <option value="oldest" {% if request.GET.sort == 'oldest' %}selected{% endif %}>
+                            Oldest first
+                        </option>
+                        <option value="most_topics" {% if request.GET.sort == 'most_topics' %}selected{% endif %}>
+                            Most topics
+                        </option>
+                        <option value="most_members" {% if request.GET.sort == 'most_members' %}selected{% endif %}>
+                            Most members
+                        </option>
+                        <option value="alphabetical" {% if request.GET.sort == 'alphabetical' %}selected{% endif %}>
+                            A-Z
+                        </option>
+                    </select>
+                </div>
+
+                {% if request.GET.search or selected_tag_ids %}
+                    <a href="{% url 'forums:forum_list' %}" class="clear-filters-btn">Clear filters</a>
+                {% endif %}
             </div>
-        {% else %}
-            <div class="no-forums">
-                <p>No forums have been created yet.</p>
-                <a href="{% url 'forums:add_forum' %}" class="btn btn-primary btn-center">Create the First Forum</a>
+        </form>
+
+        <!-- Активні фільтри -->
+        {% if request.GET.search or selected_tag_ids %}
+            <div class="active-filters">
+                <span class="active-filters-label">Active filters:</span>
+                {% if request.GET.search %}
+                    <span class="filter-tag">
+                        Search: "{{ request.GET.search }}"
+                        <a href="?{% for tag_id in selected_tag_ids %}tag={{ tag_id }}&{% endfor %}{% if request.GET.sort %}sort={{ request.GET.sort }}{% endif %}" class="remove-filter">×</a>
+                    </span>
+                {% endif %}
+                {% if selected_tag_ids %}
+                    {% for selected_tag_id in selected_tag_ids %}
+                        {% for tag in all_tags %}
+                            {% if tag.id == selected_tag_id %}
+                                <span class="filter-tag">
+                                    Tag: {{ tag.name }}
+                                    <a href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% for other_tag_id in selected_tag_ids %}{% if other_tag_id != selected_tag_id %}tag={{ other_tag_id }}&{% endif %}{% endfor %}{% if request.GET.sort %}sort={{ request.GET.sort }}{% endif %}" class="remove-filter">×</a>
+                                </span>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <!-- Результати пошуку -->
+        {% if request.GET.search or selected_tag_ids %}
+            <div class="search-results-info">
+                Found {{ forums.count }} forum{{ forums.count|pluralize }} 
+                {% if request.GET.search %}matching "{{ request.GET.search }}"{% endif %}
+                {% if selected_tag_ids and request.GET.search %}and {% endif %}
+                {% if selected_tag_ids %}
+                    with tag{{ selected_tag_ids|length|pluralize }}:
+                    {% for selected_tag_id in selected_tag_ids %}
+                        {% for tag in all_tags %}
+                            {% if tag.id == selected_tag_id %}
+                                "{{ tag.name }}"{% if not forloop.parentloop.last %}, {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                {% endif %}
             </div>
         {% endif %}
     </div>
+
+    {% if forums %}
+        <div class="forums-list">
+            {% for forum in forums %}
+                <a href="{% url 'forums:forum_detail' forum.id %}" class="forum-card-link">
+                    <div class="forum-card">
+                        <h3>{{ forum.title }}</h3>
+                        <p class="description">{{ forum.description }}</p>
+
+                        {% if forum.tags.all %}
+                        <div class="forum-tags">
+                            {% for tag in forum.tags.all %}
+                                <span class="forum-tag">{{ tag.name }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="forum-meta">
+                            <span class="creator">Created by: {{ forum.creator.username }}</span>
+                            <span class="members">{{ forum.members.count }} members</span>
+                            <span class="topics">{{ forum.topic_count }} topics</span>
+                            {% if forum.last_activity %}
+                                <span class="activity">Last active: {{ forum.last_activity|date:"F j, Y" }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-forums">
+            {% if request.GET.search or selected_tag_ids %}
+                <p>No forums found matching your search criteria.</p>
+                <a href="{% url 'forums:forum_list' %}" class="btn btn-secondary">View All Forums</a>
+            {% else %}
+                <p>No forums have been created yet.</p>
+                {% if not user.userprofile.is_currently_banned %}
+                    <a href="{% url 'forums:add_forum' %}" class="btn btn-primary btn-center">Create the First Forum</a>
+                {% endif %}
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<script>
+// Функція для оновлення фільтра тегів
+function updateTagsFilter() {
+    setTimeout(() => {
+        document.getElementById('search-form').submit();
+    }, 300);
+}
+
+// Функція для показу/приховування контейнера з тегами
+function toggleTagsContainer() {
+    const container = document.getElementById('tags-container');
+    const button = document.getElementById('toggle-tags-button');
+    const buttonText = document.getElementById('tags-button-text');
+    const arrow = button.querySelector('.toggle-arrow');
+    
+    if (container.style.display === 'none' || !container.style.display) {
+        container.style.display = 'flex';
+        buttonText.textContent = 'Hide tags';
+        arrow.textContent = '▲';
+        button.classList.add('active');
+    } else {
+        container.style.display = 'none';
+        updateTagsButtonText();
+        arrow.textContent = '▼';
+        button.classList.remove('active');
+    }
+}
+
+// Функція для оновлення тексту кнопки
+function updateTagsButtonText() {
+    const selectedCount = document.querySelectorAll('input[name="tag"]:checked').length;
+    const buttonText = document.getElementById('tags-button-text');
+    const countSpan = document.getElementById('selected-tags-count');
+    
+    if (selectedCount > 0) {
+        buttonText.textContent = 'Filter by tags';
+        countSpan.textContent = `(${selectedCount} selected)`;
+        countSpan.style.display = 'inline';
+    } else {
+        buttonText.textContent = 'Show all tags';
+        countSpan.style.display = 'none';
+    }
+}
+
+// Ініціалізація при завантаженні сторінки
+document.addEventListener('DOMContentLoaded', function() {
+    const selectedTags = document.querySelectorAll('input[name="tag"]:checked');
+    const container = document.getElementById('tags-container');
+    const button = document.getElementById('toggle-tags-button');
+    const arrow = button.querySelector('.toggle-arrow');
+    
+    updateTagsButtonText();
+    
+    if (selectedTags.length > 0) {
+        container.style.display = 'flex';
+        document.getElementById('tags-button-text').textContent = 'Hide tags';
+        arrow.textContent = '▲';
+        button.classList.add('active');
+    } else {
+        container.style.display = 'none';
+    }
+});
+</script>
+
+<style>
+.search-filters {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+    border: 1px solid #e9ecef;
+}
+
+.search-form {
+    margin-bottom: 0;
+}
+
+.search-row {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    position: relative;
+}
+
+.search-input-group {
+    flex: 1;
+    min-width: 300px;
+    display: flex;
+    position: relative;
+    margin-bottom: 0;
+}
+
+.search-input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 2px solid #ddd;
+    border-radius: 5px 0 0 5px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+.search-input:focus {
+    border-color: #007bff;
+}
+
+.search-btn {
+    padding: 10px 15px;
+    background: #007bff;
+    color: white;
+    border: 2px solid #007bff;
+    border-radius: 0 5px 5px 0;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.search-btn:hover {
+    background: #0056b3;
+    border-color: #0056b3;
+}
+
+.search-icon {
+    font-size: 16px;
+}
+
+.filter-group, .sort-group {
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+}
+
+.tags-filter-container {
+    position: relative;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+.tags-filter-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 5px;
+    height: 16px;
+}
+
+.toggle-tags-btn {
+    background: #f8f9fa;
+    border: 2px solid #ddd;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #495057;
+    transition: all 0.3s ease;
+    width: 100%;
+    text-align: left;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 42px;
+    box-sizing: border-box;
+}
+
+.toggle-tags-btn:hover {
+    background: #e9ecef;
+    border-color: #007bff;
+}
+
+.toggle-tags-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.toggle-arrow {
+    font-size: 12px;
+    margin-left: 5px;
+}
+
+#selected-tags-count {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-left: 5px;
+}
+
+.tags-checkboxes {
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 15px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    min-width: 250px;
+}
+
+.tag-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    transition: all 0.2s ease;
+    font-size: 11px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+.tag-checkbox-label:hover {
+    background: #e9ecef;
+    border-color: #007bff;
+}
+
+.tag-checkbox-label input[type="checkbox"] {
+    margin: 0;
+    width: 12px;
+    height: 12px;
+}
+
+.tag-checkbox-label input[type="checkbox"]:checked + .tag-checkbox-text {
+    font-weight: 600;
+    color: #007bff;
+}
+
+.tag-checkbox-label:has(input:checked) {
+    background: #e3f2fd;
+    border-color: #007bff;
+}
+
+.tag-checkbox-text {
+    user-select: none;
+}
+
+.sort-group {
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+}
+
+.sort-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 5px;
+    height: 16px;
+}
+
+.tag-filter, .sort-filter {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.3s ease;
+    height: 42px;
+    box-sizing: border-box;
+}
+
+.tag-filter:focus, .sort-filter:focus {
+    border-color: #007bff;
+}
+
+.clear-filters-btn {
+    padding: 10px 15px;
+    background: #dc3545;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+    white-space: nowrap;
+    height: 42px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    align-self: flex-end;
+}
+
+.clear-filters-btn:hover {
+    background: #c82333;
+    color: white;
+    text-decoration: none;
+}
+
+.active-filters {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.active-filters-label {
+    font-weight: 600;
+    color: #666;
+    font-size: 14px;
+}
+
+.filter-tag {
+    background: #007bff;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.remove-filter {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.remove-filter:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    text-decoration: none;
+}
+
+.search-results-info {
+    margin-top: 15px;
+    padding: 10px;
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    border-radius: 0 4px 4px 0;
+    color: #0d47a1;
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    .search-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-input-group {
+        min-width: auto;
+        order: 1;
+    }
+
+    .filter-group, .sort-group {
+        min-width: auto;
+        order: 2;
+    }
+    
+    .clear-filters-btn {
+        order: 3;
+        align-self: flex-start;
+    }
+
+    .active-filters {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .tags-checkboxes {
+        position: static;
+        max-height: 150px;
+        min-width: auto;
+    }
+    
+    .tags-filter-container {
+        width: 100%;
+        min-width: auto;
+    }
+}
+
+.forum-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.forum-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.no-forums {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.btn-center {
+    display: inline-block;
+    margin-top: 15px;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    color: white;
+    text-decoration: none;
+}
+</style>
 {% endblock %}

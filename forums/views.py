@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.http import HttpResponseForbidden
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Count, Max
+from django.db.models import Count, Max, Q
 from django.views.decorators.http import require_POST
 from forums.forms import *
 from forums.models import *
@@ -16,12 +16,64 @@ from django.template.loader import render_to_string
 from django.http import JsonResponse
 
 def forum_list(request):
+    # Базовий QuerySet
     forums = Forum.objects.annotate(
         topic_count=Count('topics'),
         last_activity=Max('topics__created_at')
-    ).order_by('-last_activity')
-
-    return render(request, 'forum_list.html', {'forums': forums})
+    )
+    
+    # Отримуємо параметри з URL
+    search_query = request.GET.get('search', '').strip()
+    tag_filter = request.GET.getlist('tag')  # Змінено на getlist для підтримки кількох тегів
+    sort_option = request.GET.get('sort', 'newest')
+    
+    # Пошук за назвою та описом
+    if search_query:
+        forums = forums.filter(
+            Q(title__icontains=search_query) | 
+            Q(description__icontains=search_query)
+        )
+    
+    # Фільтрація за тегами (підтримка кількох тегів)
+    if tag_filter:
+        tag_ids = request.GET.getlist('tag')  # Отримуємо список тегів
+        if tag_ids:
+            try:
+                # Конвертуємо в числа та фільтруємо валідні ID
+                valid_tag_ids = [int(tag_id) for tag_id in tag_ids if tag_id.isdigit()]
+                if valid_tag_ids:
+                    # Фільтруємо форуми, які мають хоча б один з вибраних тегів
+                    forums = forums.filter(tags__id__in=valid_tag_ids).distinct()
+            except (ValueError, TypeError):
+                pass
+    
+    # Сортування
+    if sort_option == 'newest':
+        forums = forums.order_by('-date_posted')
+    elif sort_option == 'oldest':
+        forums = forums.order_by('date_posted')
+    elif sort_option == 'most_topics':
+        forums = forums.order_by('-topic_count')
+    elif sort_option == 'most_members':
+        forums = forums.annotate(member_count=Count('members')).order_by('-member_count')
+    elif sort_option == 'alphabetical':
+        forums = forums.order_by('title')
+    elif sort_option == 'last_activity':
+        forums = forums.order_by('-last_activity')
+    else:
+        forums = forums.order_by('-last_activity')  # За замовчуванням
+    
+    # Отримуємо всі доступні теги для фільтра
+    all_tags = Tag.objects.all().order_by('name')
+    
+    # Отримуємо вибрані теги для передачі в шаблон
+    selected_tag_ids = [int(tag_id) for tag_id in tag_filter if tag_id.isdigit()]
+    
+    return render(request, 'forum_list.html', {
+        'forums': forums,
+        'all_tags': all_tags,
+        'selected_tag_ids': selected_tag_ids,
+    })
 
 
 @login_required
@@ -398,3 +450,4 @@ def report_forum(request, forum_id):
         return redirect('forums:forum_detail', forum_id=forum.id)
 
     return redirect('forums:forum_list')
+
