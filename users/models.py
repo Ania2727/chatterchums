@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 from forums.models import Tag
 
 class UserProfile(models.Model):
@@ -10,9 +11,22 @@ class UserProfile(models.Model):
     bio = models.TextField(blank=True)
     profile_pic = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
     interests = models.ManyToManyField(Tag, related_name='interested_users', blank=True)
-    
+
+    is_banned = models.BooleanField(default=False)
+    ban_until = models.DateTimeField(null=True, blank=True)
+
     def __str__(self):
         return self.user.username
+
+    def is_currently_banned(self):
+        if self.is_banned and self.ban_until:
+            if timezone.now() >= self.ban_until:
+                self.is_banned = False
+                self.ban_until = None
+                self.save(update_fields=["is_banned", "ban_until"])
+                return False
+            return True
+        return self.is_banned
 
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
