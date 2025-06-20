@@ -34,8 +34,10 @@
         </div>
     {% empty %}
         <p>No complaints submitted yet.</p>
+<p>Total complaints: {{ complaints|length }}</p>
     {% endfor %}
 </div>
+
 
 <style>
 .complaint-item {

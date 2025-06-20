@@ -8,8 +8,12 @@
         <div class="user-info">
             <div class="section-header">
                 <h1>{{ user.username }}'s Profile</h1>
+
                 {% if not is_own_profile %}
                     <span class="profile-badge">Viewing User Profile</span>
+                {% endif %}
+                {% if user.userprofile.is_banned %}
+                    <span class="profile-badge">(Currently banned until {{user.userprofile.ban_end_date}})</span>
                 {% endif %}
             </div>
 

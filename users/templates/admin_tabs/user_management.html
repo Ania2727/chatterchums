@@ -40,7 +40,21 @@
         <p class="loading-text">Loading moderators...</p>
     </div>
 </div>
-
+<div id="ban-dialog" class="ban-dialog" style="display: none;">
+    <div class="dialog-content">
+        <h3>Select Ban Duration</h3>
+        <form>
+            <label><input type="radio" name="ban-duration" value="1"> 1 Month</label><br>
+            <label><input type="radio" name="ban-duration" value="3"> 3 Months</label><br>
+            <label><input type="radio" name="ban-duration" value="6"> 6 Months</label><br>
+            <label><input type="radio" name="ban-duration" value="12"> 12 Months</label><br>
+        </form>
+        <div class="dialog-actions">
+            <button onclick="banUser()" class="btn btn-danger btn-sm">Confirm</button>
+            <button onclick="closeBanDialog()" class="btn btn-secondary btn-sm">Cancel</button>
+        </div>
+    </div>
+</div>
 <script>
 let searchTimeout;
 
@@ -203,6 +217,10 @@ function getSearchResultActions(user) {
     } else if (user.is_admin) {
         buttons.push(`<button onclick="removeAdmin(${user.id})" class="btn btn-danger btn-sm">❌ Remove Admin</button>`);
     }
+    buttons.push(`<button onclick="showBanDialog(${user.id})" class="btn btn-danger btn-sm">Ban</button>`);
+
+    buttons.push(`<button onclick="unbanUser(${user.id})" class="btn btn-warning btn-sm">Unban</button>`);
+
     
     return buttons.join(' ');
 }
@@ -228,6 +246,39 @@ function showStaffTab(tabName) {
     }
 }
 
+function showBanDialog(userId) {
+    const dialog = document.getElementById('ban-dialog');
+    dialog.style.display = 'block';
+    dialog.dataset.userId = userId;
+}
+
+function closeBanDialog() {
+    const dialog = document.getElementById('ban-dialog');
+    dialog.style.display = 'none';
+    dialog.dataset.userId = '';
+}
+
+function banUser() {
+    const dialog = document.getElementById('ban-dialog');
+    const userId = dialog.dataset.userId;
+    const selectedRadio = document.querySelector('input[name="ban-duration"]:checked');
+    console.log('Selected Radio:', selectedRadio);
+    const duration = selectedRadio ? selectedRadio.value : null;
+    console.log('Duration:', duration);
+    if (!userId || !duration) {
+        alert('Please select a ban duration.');
+        return;
+    }
+
+    makeUserRequest(`{% url "users:ban_user" 0 %}`.replace('0', userId), 'POST', { duration });
+    closeBanDialog();
+}
+
+function unbanUser(userId) {
+    if (!confirm('Unban this user?')) return;
+    makeUserRequest(`{% url "users:unban_user" 0 %}`.replace('0', userId), 'POST');
+}
+
 // Role management functions
 function promoteToModerator(userId) {
     if (!confirm('Promote this user to moderator?')) return;
@@ -249,10 +300,17 @@ function removeAdmin(userId) {
     makeUserRequest(`{% url "users:remove_admin" 0 %}`.replace('0', userId), 'POST');
 }
 
-function makeUserRequest(url, method) {
+function makeUserRequest(url, method, data = {}) {
     const formData = new FormData();
     formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-    
+
+    // Append additional data to the FormData object
+    for (const key in data) {
+        if (data.hasOwnProperty(key)) {
+            formData.append(key, data[key]);
+        }
+    }
+
     fetch(url, {
         method: method,
         body: formData
@@ -672,5 +730,29 @@ if (typeof window.managementDataLoaded === 'undefined') {
 
 .btn-danger:hover {
     background-color: #c82333;
+}
+
+    .ban-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.dialog-content h3 {
+    margin-bottom: 15px;
+}
+
+.dialog-actions {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
 }
 </style>

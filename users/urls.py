@@ -31,6 +31,9 @@ urlpatterns = [
     path('password/', change_password, name='change_password'),
     path('password/done/', change_password_done, name='change_password_done'),
     path('forum-statistics', forum_statistics, name='forum_statistics'),
-    path('admin-panel/complaints/', admin_complaints_view, name='admin_complaints'),
+    path('complaints', admin_complaints_view, name='admin_complaints'),
+    #path('admin-panel/complaints/', admin_complaints_view),
+    path('ban/<int:user_id>/', ban_user, name='ban_user'),
+    path('unban/<int:user_id>/', unban_user, name='unban_user'),
 
 ]

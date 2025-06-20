@@ -13,20 +13,23 @@ class UserProfile(models.Model):
     interests = models.ManyToManyField(Tag, related_name='interested_users', blank=True)
 
     is_banned = models.BooleanField(default=False)
-    ban_until = models.DateTimeField(null=True, blank=True)
+    ban_duration = models.IntegerField(null=True, blank=True)  # Duration in months
+    ban_end_date = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return self.user.username
 
     def is_currently_banned(self):
-        if self.is_banned and self.ban_until:
-            if timezone.now() >= self.ban_until:
+        if self.is_banned and self.ban_end_date:
+            if timezone.now().date() >= self.ban_end_date:
+
                 self.is_banned = False
-                self.ban_until = None
-                self.save(update_fields=["is_banned", "ban_until"])
+                self.ban_duration = None
+                self.ban_end_date = None
+                self.save(update_fields=["is_banned", "ban_duration", "ban_end_date"])
                 return False
             return True
-        return self.is_banned
+        return False
 
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):

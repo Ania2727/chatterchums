@@ -11,7 +11,9 @@
                 {% if user.is_authenticated %}
                 <div class="buttons">
                     <a href="{% url 'forums:forum_list' %}" ><button class="btn btn-primary">Browse Forums</button></a>
-                    <a href="{% url 'forums:add_forum' %}" ><button class="btn btn-secondary">Create Forum</button></a>
+                    {% if not user.userprofile.is_currently_banned %}
+                        <a href="{% url 'forums:add_forum' %}" ><button class="btn btn-secondary">Create Forum</button></a>
+                    {% endif %}
                 </div>
                 {% else %}
                 <div class="buttons">

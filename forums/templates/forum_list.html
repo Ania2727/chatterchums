@@ -7,7 +7,9 @@
     <div class="forums-container">
         <div class="forums-header">
             <h1>Browse All Forums</h1>
-            <a href="{% url 'forums:add_forum' %}" class="btn btn-primary">Create New Forum</a>
+            {% if not user.userprofile.is_currently_banned %}
+                <a href="{% url 'forums:add_forum' %}" class="btn btn-primary">Create New Forum</a>
+            {% endif %}
         </div>
 
         {% if forums %}

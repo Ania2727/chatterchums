@@ -15,9 +15,10 @@ from .forms import CustomUserCreationForm, CustomAuthenticationForm, UserProfile
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
 from datetime import datetime, timedelta
+from django.utils.timezone import now
 from django.db.models.functions import TruncMonth
-import calendar
 
+import calendar
 
 logger = logging.getLogger(__name__)
 
@@ -704,6 +705,57 @@ def admin_complaints_view(request):
     complaints = Complaint.objects.select_related(
         'author', 'user_target', 'forum_target', 'topic_target', 'comment_target'
     ).order_by('-complaint_time')
-    return render(request, 'admin/complaints.html', {
-        'complaints': complaints
-    })
+
+    result = []
+    for c in complaints:
+        if c.user_target:
+            target = f"User: {c.user_target.username}"
+        elif c.forum_target:
+            target = f"Forum: {c.forum_target.title}"
+        elif c.topic_target:
+            target = f"Topic: {c.topic_target.title}"
+        elif c.comment_target:
+            target = f"Comment by {c.comment_target.author.username}"
+        else:
+            target = "Unknown"
+
+        result.append({
+            'id': c.id,
+            'type': c.get_complaint_type_display(),
+            'date': c.complaint_time.strftime('%Y-%m-%d'),
+            'author': c.author.username,
+            'target': target,
+            'reason': c.get_complaint_type_display(),
+            'text': c.complaint_text,
+        })
+
+    return JsonResponse({'complaints': result})
+
+@login_required
+def ban_user(request, user_id):
+
+    user = get_object_or_404(User, id=user_id)
+    user_profile = user.userprofile
+    if request.method == 'POST':
+        duration = int(request.POST.get('duration', 0))
+        print(duration)
+        if duration > 0:
+            user_profile.is_banned = True
+            user_profile.ban_duration = duration
+            user_profile.ban_end_date = now().date() + timedelta(days=30 * duration)
+            user.save()
+            return JsonResponse({'success': True, 'message': f'User banned for {duration} months.'})
+        return JsonResponse({'success': False, 'error': 'Invalid duration.'})
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'})
+
+@login_required
+def unban_user(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    user_profile = user.userprofile
+    if request.method == 'POST':
+        user_profile.is_banned = False
+        user_profile.ban_duration = None
+        user_profile.ban_end_date = None
+        user.save()
+        return JsonResponse({'success': True, 'message': 'User unbanned successfully.'})
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'})
