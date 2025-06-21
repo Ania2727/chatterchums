@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: chatterchums
+    env: python
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+      python manage.py migrate
+    startCommand: gunicorn chatterchums.wsgi:application
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: chatterchums.settings
+      - key: PYTHON_VERSION
+        value: 3.8.10

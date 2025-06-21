@@ -135,3 +135,19 @@ LOGIN_REDIRECT_URL = 'users:profile'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Render deployment
+if 'RENDER' in os.environ:
+    ALLOWED_HOSTS = ['*']
+    DEBUG = False
+
+    # Static files for production
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+
+    # Security
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+else:
+    # Keep original settings for local development
+    pass
