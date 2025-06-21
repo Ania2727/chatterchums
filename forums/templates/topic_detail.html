@@ -14,7 +14,7 @@
         <div class="topic-header">
             <h1 class="topic-title">{{ topic.title }}</h1>
             <div class="topic-meta">
-                <span class="topic-author">Posted by {{ topic.author.username }}</span>
+                <span class="topic-author">Posted by <a href="{% url 'users:view_profile' topic.author.id %}" class="author-link">{{ topic.author.username }}</a></span>
                 <span class="topic-date">{{ topic.created_at|date:"F j, Y" }}</span>
                 <span class="topic-views">{{ topic.views }} views</span>
             </div>
@@ -38,7 +38,7 @@
                     {% for comment in comments %}
                         <div class="comment-item" data-comment-id="{{ comment.id }}">
                             <div class="comment-meta">
-                                <span class="comment-author">{{ comment.author.username }}</span>
+                                <span class="comment-author"><a href="{% url 'users:view_profile' comment.author.id %}" class="author-link">{{ comment.author.username }}</a></span>
                                 <span class="comment-date">{{ comment.created_at|date:"F j, Y" }}</span>
                             </div>
 
@@ -553,6 +553,30 @@
     font-size: 14px;
     height: 36px;
     box-sizing: border-box;
+}
+
+/* Стилі для посилань на профілі */
+.author-link {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.author-link:hover {
+    text-decoration: underline;
+    color: #0056b3;
+}
+
+.dark-mode .author-link {
+    color: #66b3ff;
+}
+
+.dark-mode .author-link:hover {
+    color: #4da6ff;
+}
+
+.comment-author .author-link {
+    font-weight: 600;
 }
 
     </style>

@@ -36,9 +36,9 @@
                     <p><strong>Date Joined:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
 
                     {% if user.userprofile.bio %}
-                        <p><strong>Bio:</strong> {{ user.userprofile.bio }}</p>
+                        <p class="bio-field"><strong>Bio:</strong> <span class="bio-text">{{ user.userprofile.bio }}</span></p>
                     {% else %}
-                        <p><strong>Bio:</strong> 
+                        <p class="bio-field"><strong>Bio:</strong> 
                             {% if is_own_profile %}
                                 <em>Edit profile to add biography.</em>
                             {% else %}
@@ -46,6 +46,41 @@
                             {% endif %}
                         </p>
                     {% endif %}
+
+                    <!-- Інтереси користувача -->
+                    <div class="user-interests">
+                        <p><strong>Interests:</strong>
+                            {% if is_own_profile %}
+                                <!-- Власний профіль - завжди показуємо інтереси -->
+                                {% if user_interests %}
+                                    <div class="interests-tags">
+                                        {% for interest in user_interests %}
+                                            <span class="interest-tag">{{ interest.name }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    <a href="{% url 'users:edit_interests' %}" class="edit-interests-link">Edit interests</a>
+                                    {% if not user.userprofile.show_interests %}
+                                        <p class="privacy-notice"><em>🔒 Your interests are hidden from other users</em></p>
+                                    {% endif %}
+                                {% else %}
+                                    <em>No interests selected yet. <a href="{% url 'users:edit_interests' %}">Add interests</a></em>
+                                {% endif %}
+                            {% else %}
+                                <!-- Чужий профіль - перевіряємо налаштування приватності -->
+                                {% if user_interests %}
+                                    <div class="interests-tags">
+                                        {% for interest in user_interests %}
+                                            <span class="interest-tag">{{ interest.name }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% elif user_interests is None %}
+                                    <em>This user has chosen to keep their interests private.</em>
+                                {% else %}
+                                    <em>No interests selected.</em>
+                                {% endif %}
+                            {% endif %}
+                        </p>
+                    </div>
 
                     <!-- Show user role if admin/moderator -->
                     {% if user.is_forum_admin %}
@@ -104,4 +139,109 @@
             <a href="{% url 'forums:forum_list' %}" class="btn btn-primary btn-center">Browse All Forums</a>
         </div>
     </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-container {
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .user-info {
+        max-width: 100%;
+    }
+
+    .profile-content {
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .user-details {
+        max-width: 100%;
+        word-wrap: break-word;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+
+    .user-details p {
+        max-width: 100%;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
+    }
+
+    .bio-field {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+    }
+
+
+    .bio-text {
+    display: inline-block;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
+    line-break: anywhere;
+    }
+
+    .interests-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .interest-tag {
+        background-color: #e3f2fd;
+        color: #1976d2;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 14px;
+        font-weight: 500;
+        display: inline-block;
+        word-break: break-word;
+        max-width: 200px;
+    }
+
+    .dark-mode .interest-tag {
+        background-color: #1e3a5f;
+        color: #90caf9;
+    }
+
+    .user-interests {
+        margin-top: 12px;
+    }
+
+    .edit-interests-link {
+        display: inline-block;
+        margin-top: 8px;
+        color: #1976d2;
+        text-decoration: none;
+        font-size: 14px;
+    }
+
+    .edit-interests-link:hover {
+        text-decoration: underline;
+    }
+
+    .dark-mode .edit-interests-link {
+        color: #90caf9;
+    }
+
+    .privacy-notice {
+        margin-top: 8px;
+        font-size: 13px;
+        color: #666;
+    }
+
+    .dark-mode .privacy-notice {
+        color: #999;
+    }
+</style>
 {% endblock %}

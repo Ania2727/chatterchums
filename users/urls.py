@@ -36,5 +36,5 @@ urlpatterns = [
     path('ban/<int:user_id>/', ban_user, name='ban_user'),
     path('unban/<int:user_id>/', unban_user, name='unban_user'),
     path('complaints/<int:complaint_id>/dismiss', dismiss_complaint, name='dismiss_complaint'),
-
+    path('edit-interests/', edit_interests, name='edit_interests'),
 ]

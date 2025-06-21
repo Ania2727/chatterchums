@@ -1,16 +1,18 @@
 <div class="comment-item" data-comment-id="{{ comment.id }}">
     <div class="comment-meta">
-        <span class="comment-author">{{ comment.author.username }}</span>
+        <span class="comment-author">
+            <a href="{% url 'users:view_profile' comment.author.id %}" class="author-link">{{ comment.author.username }}</a>
+        </span>
         <span class="comment-date">{{ comment.created_at|date:"F j, Y" }}</span>
     </div>
 
     <div class="comment-content">
-        <div class="comment-text">{{ comment.content|linebreaks }}</div>
+        <div class="comment-text collapsible-content">{{ comment.content|linebreaks }}</div>
+        <button class="btn-link toggle-expand" onclick="toggleComment(this)"></button>
         <textarea class="comment-edit-input" style="display: none;">{{ comment.content }}</textarea>
     </div>
 
-    {% if user.is_authenticated %}
-
+    {% if user.is_authenticated and not user.userprofile.is_currently_banned %}
         <div class="comment-actions">
             {% if user == comment.author %}
                 <button onclick="editComment({{ comment.id }})" class="btn-link edit-btn">Edit</button>
@@ -24,7 +26,6 @@
                 </button>
             {% endif %}
             <button class="btn-link report-toggle-btn" onclick="toggleReport({{ comment.id }})">Report</button>
-
         </div>
 
         <div class="comment-report-form" id="report-form-{{ comment.id }}" style="display: none;">

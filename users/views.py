@@ -29,39 +29,45 @@ def profile_view(request):
     joined_forums = Forum.objects.filter(members=request.user).exclude(creator=request.user)
     recent_topics = Topic.objects.filter(author=request.user).order_by('-created_at')[:3]
     recent_comments = Comment.objects.filter(author=request.user).order_by('-created_at')[:5]
+    
+    # Отримуємо інтереси користувача
+    user_interests = request.user.userprofile.interests.all()
 
     context = {
-        'user': request.user,  # додано для сумісності з шаблоном
+        'user': request.user,
         'created_forums': created_forums,
         'joined_forums': joined_forums,
         'recent_topics': recent_topics,
         'recent_comments': recent_comments,
-        'is_own_profile': True,  # додано - завжди True для власного профілю
+        'is_own_profile': True,
+        'user_interests': user_interests,
     }
     return render(request, 'profile.html', context)
 
 @login_required
 def view_user_profile(request, user_id):
-    # Отримуємо користувача або 404
     profile_user = get_object_or_404(User, id=user_id)
     
-    # Якщо це власний профіль, перенаправляємо на звичайну сторінку профілю
     if profile_user == request.user:
         return redirect('users:profile')
     
-    # Отримуємо дані для чужого профілю
     created_forums = Forum.objects.filter(creator=profile_user)
     joined_forums = Forum.objects.filter(members=profile_user).exclude(creator=profile_user)
     recent_topics = Topic.objects.filter(author=profile_user).order_by('-created_at')[:3]
     recent_comments = Comment.objects.filter(author=profile_user).order_by('-created_at')[:5]
     
+    user_interests = None
+    if hasattr(profile_user, 'userprofile') and profile_user.userprofile.show_interests:
+        user_interests = profile_user.userprofile.interests.all()
+    
     context = {
-        'user': profile_user,  # користувач чий профіль переглядаємо
+        'user': profile_user,
         'created_forums': created_forums,
         'joined_forums': joined_forums,
         'recent_topics': recent_topics,
         'recent_comments': recent_comments,
-        'is_own_profile': False,  # завжди False для чужого профілю
+        'is_own_profile': False,
+        'user_interests': user_interests,
     }
     
     return render(request, 'profile.html', context)
@@ -88,6 +94,34 @@ def delete_profile(request):
         return redirect('home')
     return redirect('users:profile')
 
+@login_required
+def edit_interests(request):
+    if request.method == 'POST':
+        interest_ids = request.POST.getlist('interests')
+        
+        user_profile = request.user.userprofile
+        
+        # Очищаємо старі інтереси та додаємо нові
+        user_profile.interests.clear()
+        for interest_id in interest_ids:
+            try:
+                tag = Tag.objects.get(id=interest_id)
+                user_profile.interests.add(tag)
+            except Tag.DoesNotExist:
+                pass
+        
+        messages.success(request, 'Your interests have been updated!')
+        return redirect('users:profile')
+    
+    # GET запит - показуємо форму редагування
+    all_tags = Tag.objects.all().order_by('name')
+    current_interests = request.user.userprofile.interests.all()
+    
+    context = {
+        'tags': all_tags,
+        'current_interests': current_interests,
+    }
+    return render(request, 'edit_interests.html', context)
 
 def settings_view(request):
     current_theme = request.COOKIES.get('theme', 'light')

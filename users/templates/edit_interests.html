@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Interests - ChatterChums{% endblock %}
+
+{% block content %}
+<div class="edit-interests-container">
+    <div class="edit-interests-header">
+        <h1>Edit Your Interests</h1>
+        <p>Select the topics that interest you</p>
+    </div>
+
+    <form id="edit-interests-form" method="post" action="{% url 'users:edit_interests' %}">
+        {% csrf_token %}
+        
+        <div class="interests-grid">
+            {% for tag in tags %}
+                <button type="button" 
+                        class="interest-btn {% if tag in current_interests %}selected{% endif %}" 
+                        data-tag-id="{{ tag.id }}">
+                    {{ tag.name }}
+                </button>
+            {% endfor %}
+        </div>
+
+        <div id="selected-interests-container">
+            {% for interest in current_interests %}
+                <input type="hidden" name="interests" value="{{ interest.id }}">
+            {% endfor %}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{% url 'users:profile' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const interestButtons = document.querySelectorAll('.interest-btn');
+    const selectedContainer = document.getElementById('selected-interests-container');
+    
+    // Ініціалізуємо Set з поточними інтересами
+    const selectedInterests = new Set();
+    const currentInputs = selectedContainer.querySelectorAll('input[name="interests"]');
+    currentInputs.forEach(input => {
+        selectedInterests.add(input.value);
+    });
+
+    interestButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const tagId = this.getAttribute('data-tag-id');
+
+            if (this.classList.contains('selected')) {
+                // Видаляємо з вибраних
+                this.classList.remove('selected');
+                selectedInterests.delete(tagId);
+
+                const input = selectedContainer.querySelector(`input[value="${tagId}"]`);
+                if (input) {
+                    input.remove();
+                }
+            } else {
+                // Додаємо до вибраних
+                this.classList.add('selected');
+                selectedInterests.add(tagId);
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'interests';
+                input.value = tagId;
+                selectedContainer.appendChild(input);
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.edit-interests-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.edit-interests-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.edit-interests-header h1 {
+    margin-bottom: 0.5rem;
+}
+
+.edit-interests-header p {
+    color: #666;
+}
+
+.dark-mode .edit-interests-header p {
+    color: #aaa;
+}
+
+.interests-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.interest-btn {
+    padding: 0.75rem 1rem;
+    border: 2px solid #ddd;
+    background-color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    text-align: center;
+}
+
+.dark-mode .interest-btn {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #fff;
+}
+
+.interest-btn:hover {
+    border-color: #1976d2;
+    transform: translateY(-2px);
+}
+
+.interest-btn.selected {
+    background-color: #1976d2;
+    color: white;
+    border-color: #1976d2;
+}
+
+.dark-mode .interest-btn.selected {
+    background-color: #1976d2;
+    border-color: #1976d2;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.btn {
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.3s ease;
+}
+
+.btn-primary {
+    background-color: #1976d2;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #1565c0;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+</style>
+{% endblock %}

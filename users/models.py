@@ -8,10 +8,11 @@ from forums.models import Tag
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     email = models.EmailField()
-    bio = models.TextField(blank=True)
+    bio = models.TextField(max_length=500, blank=True, verbose_name="Biography")
     profile_pic = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
     interests = models.ManyToManyField(Tag, related_name='interested_users', blank=True)
-
+    show_interests = models.BooleanField(default=True, verbose_name="Show interests to other users")
+    
     is_banned = models.BooleanField(default=False)
     ban_duration = models.IntegerField(null=True, blank=True)  # Duration in months
     ban_end_date = models.DateField(null=True, blank=True)

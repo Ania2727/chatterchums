@@ -43,9 +43,26 @@ class CustomAuthenticationForm(AuthenticationForm):
     )
 
 class UserProfileForm(forms.ModelForm):
+    bio = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'rows': 4,
+            'maxlength': '500',
+            'placeholder': 'Tell us about yourself...'
+        }),
+        max_length=500,
+        required=False
+    )
+
     class Meta:
         model = UserProfile
-        fields = ['bio', 'profile_pic']
+        fields = ['bio', 'profile_pic', 'show_interests']  # додайте show_interests
+        widgets = {
+            'bio': forms.Textarea(attrs={'rows': 4}),
+            'show_interests': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'show_interests': 'Show my interests on my profile',
+        }
 
 class UserForm(forms.ModelForm):
     class Meta:
