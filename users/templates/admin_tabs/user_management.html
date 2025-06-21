@@ -246,38 +246,6 @@ function showStaffTab(tabName) {
     }
 }
 
-function showBanDialog(userId) {
-    const dialog = document.getElementById('ban-dialog');
-    dialog.style.display = 'block';
-    dialog.dataset.userId = userId;
-}
-
-function closeBanDialog() {
-    const dialog = document.getElementById('ban-dialog');
-    dialog.style.display = 'none';
-    dialog.dataset.userId = '';
-}
-
-function banUser() {
-    const dialog = document.getElementById('ban-dialog');
-    const userId = dialog.dataset.userId;
-    const selectedRadio = document.querySelector('input[name="ban-duration"]:checked');
-    console.log('Selected Radio:', selectedRadio);
-    const duration = selectedRadio ? selectedRadio.value : null;
-    console.log('Duration:', duration);
-    if (!userId || !duration) {
-        alert('Please select a ban duration.');
-        return;
-    }
-
-    makeUserRequest(`{% url "users:ban_user" 0 %}`.replace('0', userId), 'POST', { duration });
-    closeBanDialog();
-}
-
-function unbanUser(userId) {
-    if (!confirm('Unban this user?')) return;
-    makeUserRequest(`{% url "users:unban_user" 0 %}`.replace('0', userId), 'POST');
-}
 
 // Role management functions
 function promoteToModerator(userId) {

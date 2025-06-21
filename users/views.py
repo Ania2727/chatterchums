@@ -602,7 +602,6 @@ def search_users(request):
     
     return JsonResponse({'users': users_data})
 
-@login_required
 def view_user_profile(request, user_id):
     profile_user = get_object_or_404(User, id=user_id)
     
@@ -909,6 +908,7 @@ def ban_user_complaint(request, complaint_id):
 
 @login_required
 def mark_complaint_reviewed(request, complaint_id):
+    print("try to mark_complaint_reviewed")
     if request.method == 'POST':
         try:
             complaint = Complaint.objects.get(id=complaint_id)
