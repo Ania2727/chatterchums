@@ -132,6 +132,17 @@ def forum_detail(request, forum_id):
 
 
 def create_topic(request, forum_id):
+    """
+       Handles the creation of a new topic within a specific forum.
+
+       Args:
+           request (HttpRequest): The HTTP request object containing user data and form submission.
+           forum_id (int): The ID of the forum where the topic is being created.
+       Returns:
+           HttpResponse: Redirects to the topic detail page if the topic is successfully created.
+           HttpResponseForbidden: Returns a forbidden response if the user is not a member of the forum.
+           HttpResponse: Renders the topic creation form if the request method is GET.
+       """
     forum = get_object_or_404(Forum, id=forum_id)
 
     if not forum.members.filter(id=request.user.id).exists():

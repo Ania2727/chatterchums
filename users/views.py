@@ -25,6 +25,19 @@ logger = logging.getLogger(__name__)
 
 @login_required
 def profile_view(request):
+    """
+        Display the profile page for the currently logged-in user.
+
+        Retrieves and organizes data related to the user's created forums, joined forums,
+        recent topics, recent comments, and interests. Passes this data to the profile
+        template for rendering.
+
+        Args:
+            request (HttpRequest): The HTTP request object containing user information.
+
+        Returns:
+            HttpResponse: A rendered profile page with the user's data.
+    """
     created_forums = Forum.objects.filter(creator=request.user)
     joined_forums = Forum.objects.filter(members=request.user).exclude(creator=request.user)
     recent_topics = Topic.objects.filter(author=request.user).order_by('-created_at')[:3]
@@ -76,6 +89,19 @@ def view_user_profile(request, user_id):
 @csrf_protect
 @login_required
 def delete_profile(request):
+    """
+        Handles the deletion of the currently logged-in user's profile.
+
+        If the user has a profile picture, it attempts to delete the file from the server.
+        Logs the user out and deletes the user account from the database.
+
+        Args:
+            request (HttpRequest): The HTTP request object containing user information.
+
+        Returns:
+            HttpResponse: Redirects to the home page after successful deletion, or
+            redirects to the user's profile page if the request method is not POST.
+    """
     if request.method == 'POST':
         user = request.user
 
@@ -469,8 +495,25 @@ def list_users(request):
     
     return JsonResponse({'users': users_data})
 
+
 @login_required
 def promote_to_moderator(request, user_id):
+    """
+        Promote a user to the moderator role.
+
+        This view checks if the requesting user has administrator privileges. If the user has
+        the required permissions and the request method is POST, it assigns the 'moderator' group
+        to the specified user.
+        Args:
+            request (HttpRequest): The HTTP request object containing user information.
+            user_id (int): The ID of the user to be promoted.
+        Returns:
+            JsonResponse: A JSON response indicating success or failure. Possible responses:
+                - {'success': True, 'message': 'User promoted to moderator'} (on success)
+                - {'error': 'Access denied'} (if the requesting user lacks permissions)
+                - {'error': 'User is already a moderator'} (if the user is already a moderator)
+                - {'error': 'Invalid request'} (if the request method is not POST)
+        """
     if not (hasattr(request.user, 'is_forum_admin') and request.user.is_forum_admin()):
         return JsonResponse({'error': 'Access denied'}, status=403)
     
