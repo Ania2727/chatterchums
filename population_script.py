@@ -335,7 +335,7 @@ def create_complaints():
     for _ in range(5):
         author = random.choice(users)
 
-        target_type = random.choice(['forum', 'topic', 'comment', 'user'])
+        target_type = random.choice(['forum', 'topic', 'comment'])
         complaint_type = random.choice(complaint_types)
         complaint_text = f"Random complaint about {target_type} - {complaint_type}"
 
@@ -351,9 +351,6 @@ def create_complaints():
             complaint_kwargs['topic_target'] = random.choice(topics)
         elif target_type == 'comment' and comments:
             complaint_kwargs['comment_target'] = random.choice(comments)
-        elif target_type == 'user' and users:
-            target_user = random.choice([u for u in users if u != author])  # Не на себе
-            complaint_kwargs['user_target'] = target_user
         else:
             continue
 
