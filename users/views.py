@@ -736,22 +736,50 @@ def forum_statistics(request):
 
 
 @login_required
-def admin_complaints_view(request):
+def admin_complaints_json_view(request):
     complaints = Complaint.objects.select_related(
         'author',
         'user_target', 'forum_target', 'topic_target', 'comment_target'
     ).order_by('-complaint_time')
 
-    # Add a method to get status display if it doesn't exist
+    data = []
+
     for complaint in complaints:
-        if not hasattr(complaint, 'complaint_status_display'):
-            complaint.complaint_status_display = complaint.get_status_display()
+        target = None
+        target_type = None
+        target_display = None
 
-    context = {
-        'complaints': complaints,
-    }
+        if complaint.user_target:
+            target_type = 'user'
+            target = complaint.user_target.username
+            target_display = f'User: {target}'
+        elif complaint.forum_target:
+            target_type = 'forum'
+            target = complaint.forum_target.id
+            target_display = f'Forum: {complaint.forum_target.title}'
+        elif complaint.topic_target:
+            target_type = 'topic'
+            target = complaint.topic_target.id
+            target_display = f'Topic: {complaint.topic_target.title}'
+        elif complaint.comment_target:
+            target_type = 'comment'
+            target = complaint.comment_target.id
+            target_display = f'Comment by {complaint.comment_target.author.username}'
 
-    return render(request, 'complaints.html', context)
+        data.append({
+            'id': complaint.id,
+            'type': complaint.get_complaint_type_display(),
+            'status': complaint.get_status_display(),
+            'time': complaint.complaint_time.strftime('%Y-%m-%d'),
+            'reason': complaint.get_complaint_type_display(),
+            'text': complaint.complaint_text,
+            'author': complaint.author.username,
+            'target_type': target_type,
+            'target': target,
+            'target_display': target_display,
+        })
+
+    return JsonResponse({'complaints': data})
 
 @login_required
 def ban_user(request, user_id):

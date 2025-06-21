@@ -1,5 +1,6 @@
 <h2>User Complaints</h2>
 
+<p>Total complaints: <span id="total-count">...</span></p>
 <div class="complaints-list">
     {% for complaint in complaints %}
         <div class="complaint-item">
@@ -38,8 +39,6 @@
         <p>No complaints submitted yet.</p>
     {% endfor %}
 </div>
-
-<p>Total complaints: {{ complaints|length }}</p>
 
 <style>
 .complaint-item {
@@ -84,15 +83,58 @@
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle all complaint action buttons
-    document.querySelectorAll('.complaint-actions button').forEach(button => {
-        button.addEventListener('click', function() {
-            const action = this.getAttribute('data-action');
-            const complaintId = this.getAttribute('data-id');
+    fetch('{% url "users:admin_complaints_json" %}')
+    .then(response => response.json())
+    .then(data => {
+        const listContainer = document.querySelector('.complaints-list');
+        listContainer.innerHTML = '';
 
-            handleComplaintAction(action, complaintId, this);
-        });
+        if (!data.complaints.length) {
+            listContainer.innerHTML = '<p>No complaints submitted yet.</p>';
+        } else {
+            data.complaints.forEach(complaint => {
+                const div = document.createElement('div');
+                div.className = 'complaint-item';
+                div.innerHTML = `
+                    <div class="complaint-header">
+                        <span class="complaint-id">#${String(complaint.id).padStart(3, '0')}</span>
+                        <span class="complaint-type">${complaint.type}</span>
+                        <span class="complaint-date">${complaint.time}</span>
+                        <span class="complaint-status">${complaint.status}</span>
+                    </div>
+                    <div class="complaint-details">
+                        <p><strong>Reported by:</strong> ${complaint.author}</p>
+                        <p><strong>Target:</strong> ${complaint.target_display}</p>
+                        <p><strong>Reason:</strong> ${complaint.reason}</p>
+                        <p><strong>Content:</strong> "${complaint.text}"</p>
+                    </div>
+                    <div class="complaint-actions">
+                        <button class="btn btn-success" data-action="dismiss" data-id="${complaint.id}">Ignore</button>
+                        <button class="btn btn-warning" data-action="delete" data-id="${complaint.id}">Delete Post</button>
+                        <button class="btn btn-danger" data-action="ban" data-id="${complaint.id}">Ban User</button>
+                        <button class="btn btn-info" data-action="reviewed" data-id="${complaint.id}">Mark as Reviewed</button>
+                    </div>
+                `;
+                listContainer.appendChild(div);
+            });
+        }
+
+        document.getElementById('total-count').textContent = data.complaints.length;
+    })
+    .catch(error => {
+        console.error('Error loading complaints:', error);
+    });
+document.addEventListener('DOMContentLoaded', function() {
+    const listContainer = document.querySelector('.complaints-list');
+
+    listContainer.addEventListener('click', function(event) {
+        const button = event.target.closest('button[data-action]');
+        if (!button) return; // Клік не по кнопці з data-action — ігноруємо
+
+        const action = button.getAttribute('data-action');
+        const complaintId = button.getAttribute('data-id');
+
+        handleComplaintAction(action, complaintId, button);
     });
 });
 
