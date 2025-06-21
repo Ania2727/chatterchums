@@ -7,7 +7,7 @@
                 <span class="complaint-id">#{{ complaint.id|stringformat:"03d" }}</span>
                 <span class="complaint-type">{{ complaint.get_complaint_type_display }}</span>
                 <span class="complaint-date">{{ complaint.complaint_time|date:"Y-m-d" }}</span>
-                <span class="complaint-details">{{ complaint.complaint_status_display }}</span>
+                <span class="complaint-status">{{ complaint.get_status_display }}</span>
             </div>
             <div class="complaint-details">
                 <p><strong>Reported by:</strong> {{ complaint.author.username }}</p>
@@ -28,179 +28,19 @@
                 <p><strong>Content:</strong> "{{ complaint.complaint_text }}"</p>
             </div>
             <div class="complaint-actions">
-                <button class="btn btn-success">Ignore</button>
-                <button class="btn btn-warning">Delete Post</button>
-                <button class="btn btn-danger">Ban User</button>
+                <button class="btn btn-success" data-action="dismiss" data-id="{{complaint.id}}">Ignore</button>
+                <button class="btn btn-warning" data-action="delete" data-id="{{complaint.id}}">Delete Post</button>
+                <button class="btn btn-danger" data-action="ban" data-id="{{complaint.id}}">Ban User</button>
+                <button class="btn btn-info" data-action="reviewed" data-id="{{complaint.id}}">Mark as Reviewed</button>
             </div>
         </div>
     {% empty %}
         <p>No complaints submitted yet.</p>
-<p>Total complaints: {{ complaints|length }}</p>
     {% endfor %}
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const complaintsList = document.querySelector('.complaints-list');
+<p>Total complaints: {{ complaints|length }}</p>
 
-        // Fetch complaints data from the server
-        fetch('/users/complaints', {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.complaints) {
-                complaintsList.innerHTML = ''; // Clear existing content
-
-                data.complaints.forEach(complaint => {
-                    const complaintItem = document.createElement('div');
-                    complaintItem.classList.add('complaint-item');
-
-                    complaintItem.innerHTML = `
-                        <div class="complaint-header">
-                            <span class="complaint-id">#${complaint.id.toString().padStart(3, '0')}</span>
-                            <span class="complaint-type">${complaint.type}</span>
-                            <span class="complaint-date">${complaint.date}</span>
-                            <span class="complaint-id">${complaint.status}</span>
-                        </div>
-                        <div class="complaint-details">
-                            <p><strong>Reported by:</strong> ${complaint.author}</p>
-                            <p><strong>Target:</strong> ${complaint.target}</p>
-                            <p><strong>Reason:</strong> ${complaint.reason}</p>
-                            <p><strong>Content:</strong> "${complaint.text}"</p>
-                        </div>
-                        <div class="complaint-actions">
-                            <button class="btn btn-success" data-action="dismiss" data-id="${complaint.id}">Ignore</button>
-                            <button class="btn btn-warning" data-action="delete" data-id="${complaint.id}">Delete Post</button>
-                            <button class="btn btn-danger" data-action="ban" data-id="${complaint.id}">Ban User</button>
-                            <button class="btn btn-info" data-action="reviewed" data-id="${complaint.id}">Mark as Reviewed</button>
-                        </div>
-                    `;
-
-                    complaintsList.appendChild(complaintItem);
-                });
-
-                // Add event listeners for buttons
-                complaintsList.addEventListener('click', function (event) {
-                    const button = event.target;
-                    if (button.tagName === 'BUTTON') {
-                        const action = button.dataset.action;
-                        const complaintId = button.dataset.id;
-
-                        if (action === 'dismiss') {
-                            handleDismiss(complaintId, button);
-                        } else if (action === 'delete') {
-                            handleDelete(complaintId, button);
-                        } else if (action === 'ban') {
-                            handleBan(complaintId, button);
-                        } else if (action === 'reviewed') {
-                            handleReviewed(complaintId, button);
-                        }
-                    }
-                });
-            } else {
-                complaintsList.innerHTML = '<p>No complaints submitted yet.</p>';
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching complaints:', error);
-        });
-
-       function handleDismiss(complaintId, button) {
-    fetch(`/users/complaints/${complaintId}/dismiss`, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => {
-        if (response.ok) {
-            button.closest('.complaint-item').remove();
-        } else {
-            console.error('Failed to dismiss complaint');
-        }
-    });
-}
-
-        function handleDelete(complaintId, button) {
-            fetch(`/users/complaints/${complaintId}/delete`, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    button.closest('.complaint-item').remove();
-                } else {
-                    console.error('Failed to delete target');
-                }
-            });
-        }
-
-        function handleBan(complaintId, button) {
-            // Open a dialog window for banning the user
-            const banDialog = document.createElement('div');
-            banDialog.classList.add('ban-dialog');
-            banDialog.innerHTML = `
-                <div class="dialog-content">
-                    <h3>Ban User</h3>
-                    <label for="ban-duration">Duration (months):</label>
-                    <input type="number" id="ban-duration" min="1" max="12">
-                    <button class="btn btn-danger" id="confirm-ban">Confirm</button>
-                    <button class="btn btn-secondary" id="cancel-ban">Cancel</button>
-                </div>
-            `;
-            document.body.appendChild(banDialog);
-
-            document.getElementById('confirm-ban').addEventListener('click', function () {
-                const duration = document.getElementById('ban-duration').value;
-                fetch(`/users/complaints/${complaintId}/ban`, {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ duration })
-                })
-                .then(response => {
-                    if (response.ok) {
-                        button.closest('.complaint-item').remove();
-                        banDialog.remove();
-                    } else {
-                        console.error('Failed to ban user');
-                    }
-                });
-            });
-
-            document.getElementById('cancel-ban').addEventListener('click', function () {
-                banDialog.remove();
-            });
-        }
-
-        function handleReviewed(complaintId, button) {
-            fetch(`/users/complaints/${complaintId}/reviewed`, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    button.closest('.complaint-item').remove();
-                } else {
-                    console.error('Failed to mark complaint as reviewed');
-                }
-            });
-        }
-    });
-</script>
 <style>
 .complaint-item {
     border: 1px solid #ddd;
@@ -228,9 +68,343 @@
     font-size: 12px;
 }
 
+.complaint-status {
+    background: #6c757d;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
 .complaint-actions {
     display: flex;
     gap: 10px;
     margin-top: 10px;
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle all complaint action buttons
+    document.querySelectorAll('.complaint-actions button').forEach(button => {
+        button.addEventListener('click', function() {
+            const action = this.getAttribute('data-action');
+            const complaintId = this.getAttribute('data-id');
+
+            handleComplaintAction(action, complaintId, this);
+        });
+    });
+});
+
+function handleComplaintAction(action, complaintId, buttonElement) {
+    switch(action) {
+        case 'dismiss':
+            dismissComplaint(complaintId, buttonElement);
+            break;
+        case 'delete':
+            deletePost(complaintId, buttonElement);
+            break;
+        case 'ban':
+            showBanDialog(complaintId, buttonElement);
+            break;
+        case 'reviewed':
+            markAsReviewed(complaintId, buttonElement);
+            break;
+        default:
+            console.error('Unknown action:', action);
+    }
+}
+
+function dismissComplaint(complaintId, buttonElement) {
+    if (!confirm('Are you sure you want to dismiss this complaint?')) {
+        return;
+    }
+
+    buttonElement.disabled = true;
+    buttonElement.textContent = 'Processing...';
+
+    fetch(`/admin/complaints/dismiss/${complaintId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess('Complaint dismissed successfully');
+            // Remove the complaint item from the DOM
+            const complaintItem = buttonElement.closest('.complaint-item');
+            complaintItem.style.opacity = '0.5';
+            complaintItem.style.pointerEvents = 'none';
+
+            // Update status display
+            const statusSpan = complaintItem.querySelector('.complaint-status');
+            if (statusSpan) {
+                statusSpan.textContent = 'Dismissed';
+                statusSpan.style.backgroundColor = '#666';
+            }
+        } else {
+            showError(data.error || 'Failed to dismiss complaint');
+            buttonElement.disabled = false;
+            buttonElement.textContent = 'Ignore';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showError('Network error occurred');
+        buttonElement.disabled = false;
+        buttonElement.textContent = 'Ignore';
+    });
+}
+
+function deletePost(complaintId, buttonElement) {
+    if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+        return;
+    }
+
+    buttonElement.disabled = true;
+    buttonElement.textContent = 'Deleting...';
+
+    fetch(`/admin/complaints/delete-post/${complaintId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess('Post deleted successfully');
+            const complaintItem = buttonElement.closest('.complaint-item');
+            complaintItem.style.opacity = '0.5';
+            complaintItem.style.pointerEvents = 'none';
+        } else {
+            showError(data.error || 'Failed to delete post');
+            buttonElement.disabled = false;
+            buttonElement.textContent = 'Delete Post';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showError('Network error occurred');
+        buttonElement.disabled = false;
+        buttonElement.textContent = 'Delete Post';
+    });
+}
+
+function showBanDialog(complaintId, buttonElement) {
+    // Create modal dialog for ban duration
+    const modal = document.createElement('div');
+    modal.className = 'ban-modal';
+    modal.innerHTML = `
+        <div class="ban-modal-content">
+            <h3>Ban User</h3>
+            <p>Select ban duration:</p>
+            <select id="ban-duration" class="form-control">
+                <option value="1">1 Month</option>
+                <option value="3">3 Months</option>
+                <option value="6">6 Months</option>
+                <option value="12">1 Year</option>
+                <option value="24">2 Years</option>
+                <option value="60">5 Years (Permanent)</option>
+            </select>
+            <div class="ban-modal-actions">
+                <button id="confirm-ban" class="btn btn-danger">Confirm Ban</button>
+                <button id="cancel-ban" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    `;
+
+    // Add modal styles
+    const style = document.createElement('style');
+    style.textContent = `
+        .ban-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .ban-modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            min-width: 300px;
+        }
+        .ban-modal-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+    `;
+    document.head.appendChild(style);
+    document.body.appendChild(modal);
+
+    // Handle modal actions
+    document.getElementById('confirm-ban').addEventListener('click', function() {
+        const duration = document.getElementById('ban-duration').value;
+        banUser(complaintId, duration, buttonElement);
+        document.body.removeChild(modal);
+        document.head.removeChild(style);
+    });
+
+    document.getElementById('cancel-ban').addEventListener('click', function() {
+        document.body.removeChild(modal);
+        document.head.removeChild(style);
+    });
+
+    // Close modal when clicking outside
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+            document.head.removeChild(style);
+        }
+    });
+}
+
+function banUser(complaintId, duration, buttonElement) {
+    if (!confirm(`Are you sure you want to ban this user for ${duration} month(s)?`)) {
+        return;
+    }
+
+    buttonElement.disabled = true;
+    buttonElement.textContent = 'Banning...';
+
+    fetch(`/admin/complaints/ban-user/${complaintId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `duration=${duration}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess(data.message || 'User banned successfully');
+            const complaintItem = buttonElement.closest('.complaint-item');
+            complaintItem.style.opacity = '0.5';
+            complaintItem.style.pointerEvents = 'none';
+        } else {
+            showError(data.error || 'Failed to ban user');
+            buttonElement.disabled = false;
+            buttonElement.textContent = 'Ban User';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showError('Network error occurred');
+        buttonElement.disabled = false;
+        buttonElement.textContent = 'Ban User';
+    });
+}
+
+function markAsReviewed(complaintId, buttonElement) {
+    buttonElement.disabled = true;
+    buttonElement.textContent = 'Marking...';
+
+    fetch(`/admin/complaints/mark-reviewed/${complaintId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess('Complaint marked as reviewed');
+            const complaintItem = buttonElement.closest('.complaint-item');
+
+            // Update status display
+            const statusSpan = complaintItem.querySelector('.complaint-status');
+            if (statusSpan) {
+                statusSpan.textContent = 'Reviewed';
+                statusSpan.style.backgroundColor = '#28a745';
+            }
+
+            buttonElement.textContent = 'Reviewed';
+            buttonElement.classList.remove('btn-info');
+            buttonElement.classList.add('btn-success');
+        } else {
+            showError(data.error || 'Failed to mark as reviewed');
+            buttonElement.disabled = false;
+            buttonElement.textContent = 'Mark as Reviewed';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showError('Network error occurred');
+        buttonElement.disabled = false;
+        buttonElement.textContent = 'Mark as Reviewed';
+    });
+}
+
+function showSuccess(message) {
+    showNotification(message, 'success');
+}
+
+function showError(message) {
+    showNotification(message, 'error');
+}
+
+function showNotification(message, type) {
+    // Remove existing notifications
+    const existing = document.querySelector('.notification');
+    if (existing) {
+        existing.remove();
+    }
+
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+
+    // Add notification styles
+    const style = document.createElement('style');
+    style.textContent = `
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 1001;
+            max-width: 300px;
+        }
+        .notification-success {
+            background-color: #28a745;
+        }
+        .notification-error {
+            background-color: #dc3545;
+        }
+    `;
+
+    if (!document.querySelector('style[data-notifications]')) {
+        style.setAttribute('data-notifications', 'true');
+        document.head.appendChild(style);
+    }
+
+    document.body.appendChild(notification);
+
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+</script>
