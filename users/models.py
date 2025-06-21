@@ -6,6 +6,24 @@ from django.utils import timezone
 from forums.models import Tag
 
 class UserProfile(models.Model):
+    """
+        Represents a user's profile in the application.
+
+        Attributes:
+            user (OneToOneField): A one-to-one relationship with the `User` model.
+            email (EmailField): The email address of the user.
+            bio (TextField): A brief biography of the user, optional.
+            profile_pic (ImageField): The user's profile picture, optional.
+            interests (ManyToManyField): Tags representing the user's interests.
+
+            is_banned (BooleanField): Indicates whether the user is banned.
+            ban_duration (IntegerField): The duration of the ban in months, optional.
+            ban_end_date (DateField): The date when the ban ends, optional.
+
+        Methods:
+            __str__(): Returns the username of the associated user.
+            is_currently_banned(): Checks if the user is currently banned and updates the ban status if the ban has expired.
+    """
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     email = models.EmailField()
     bio = models.TextField(max_length=500, blank=True, verbose_name="Biography")

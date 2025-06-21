@@ -4,6 +4,15 @@ from django.urls import reverse
 
 
 class Tag(models.Model):
+    """
+        Represents a tag that can be associated with forums.
+
+        Attributes:
+            name (CharField): The unique name of the tag, limited to 50 characters.
+
+        Methods:
+            __str__(): Returns the string representation of the tag, which is its name.
+        """
     name = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
@@ -13,7 +22,25 @@ class Tag(models.Model):
         ordering = ['name']
 
 
+
 class Forum(models.Model):
+    """
+    Represents a forum within the application.
+
+    Attributes:
+        creator (ForeignKey): The user who created the forum.
+        name (CharField): The name of the forum, defaulting to "Anonymous".
+        link (CharField): An optional link associated with the forum.
+        date_posted (DateTimeField): The date and time the forum was created.
+        title (CharField): The title of the forum.
+        description (CharField): A brief description of the forum, up to 750 characters.
+        members (ManyToManyField): Users who have joined the forum.
+        tags (ManyToManyField): Tags associated with the forum.
+
+    Methods:
+        __str__(): Returns the string representation of the forum, which is its title.
+        get_absolute_url(): Returns the URL for the forum's detail view.
+    """
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_forums', default=None)
     name = models.CharField(max_length=50, default="Anonymous")
     link = models.CharField(max_length=100, null=True, blank=True)
@@ -30,6 +57,22 @@ class Forum(models.Model):
         return reverse('forums:forum_detail', args=[str(self.id)])
 
 class Topic(models.Model):
+    """
+    Represents a topic within a forum.
+
+    Attributes:
+        forum (ForeignKey): The forum to which the topic belongs.
+        author (ForeignKey): The user who created the topic.
+        title (CharField): The title of the topic.
+        content (TextField): The content of the topic.
+        created_at (DateTimeField): The date and time the topic was created.
+        updated_at (DateTimeField): The date and time the topic was last updated.
+        views (PositiveIntegerField): The number of views the topic has received.
+
+    Methods:
+        __str__(): Returns the string representation of the topic, which is its title.
+        get_absolute_url(): Returns the URL for the topic's detail view.
+    """
     forum = models.ForeignKey(Forum, on_delete=models.CASCADE, related_name='topics')
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='topics')
     title = models.CharField(max_length=250)
@@ -49,6 +92,19 @@ class Topic(models.Model):
 
 
 class Comment(models.Model):
+    """
+        Represents a comment within a topic.
+
+        Attributes:
+            topic (ForeignKey): The topic to which the comment belongs.
+            author (ForeignKey): The user who created the comment.
+            content (TextField): The content of the comment.
+            created_at (DateTimeField): The date and time the comment was created.
+            updated_at (DateTimeField): The date and time the comment was last updated.
+
+        Methods:
+            __str__(): Returns a string representation of the comment, including the author's username and the topic title.
+    """
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='comments')
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
     content = models.TextField()
@@ -62,7 +118,25 @@ class Comment(models.Model):
         return f'Comment by {self.author.username} on {self.topic.title}'
 
 class Complaint(models.Model):
+    """
+        Represents a complaint within the application.
 
+        Attributes:
+            complaint_text (TextField): The text describing the complaint, limited to 256 characters.
+            complaint_time (DateTimeField): The timestamp when the complaint was created.
+            complaint_type (CharField): The type of complaint, chosen from predefined reasons.
+            author (ForeignKey): The user who submitted the complaint.
+            user_target (ForeignKey): The user targeted by the complaint, if applicable.
+            forum_target (ForeignKey): The forum targeted by the complaint, if applicable.
+            topic_target (ForeignKey): The topic targeted by the complaint, if applicable.
+            comment_target (ForeignKey): The comment targeted by the complaint, if applicable.
+            status (CharField): The current status of the complaint, such as pending, reviewed, or dismissed.
+
+        Methods:
+            clean(): Validates that the complaint refers to exactly one target object.
+            get_target(): Returns the target object of the complaint.
+            __str__(): Returns a string representation of the complaint, including its target and reason.
+        """
     COMPLAINT_REASONS = [
         ('hate_speech', 'hate speech'),
         ('spam', 'spam'),
