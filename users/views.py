@@ -700,6 +700,7 @@ def forum_statistics(request):
         "top_forums": top_forums,
     })
 
+
 @login_required
 def admin_complaints_view(request):
     complaints = Complaint.objects.select_related(
@@ -707,31 +708,16 @@ def admin_complaints_view(request):
         'user_target', 'forum_target', 'topic_target', 'comment_target'
     ).order_by('-complaint_time')
 
-    result = []
-    for c in complaints:
-        if c.user_target:
-            target = f"User: {c.user_target.username}"
-        elif c.forum_target:
-            target = f"Forum: {c.forum_target.title}"
-        elif c.topic_target:
-            target = f"Topic: {c.topic_target.title}"
-        elif c.comment_target:
-            target = f"Comment by {c.comment_target.author.username}"
-        else:
-            target = "Unknown"
+    # Add a method to get status display if it doesn't exist
+    for complaint in complaints:
+        if not hasattr(complaint, 'complaint_status_display'):
+            complaint.complaint_status_display = complaint.get_status_display()
 
-        result.append({
-            'id': c.id,
-            'type': c.get_complaint_type_display(),
-            'date': c.complaint_time.strftime('%Y-%m-%d'),
-            'author': c.author.username,
-            'target': target,
-            'reason': c.get_complaint_type_display(),
-            'text': c.complaint_text,
-            'status': c.status,
-            'status_display': c.get_status_display(),
-        })
-    return JsonResponse({'complaints': result})
+    context = {
+        'complaints': complaints,
+    }
+
+    return render(request, 'complaints.html', context)
 
 @login_required
 def ban_user(request, user_id):
@@ -764,9 +750,109 @@ def unban_user(request, user_id):
 
 @login_required
 def dismiss_complaint(request, complaint_id):
-    complaint = get_object_or_404(Complaint, id=complaint_id)
     if request.method == 'POST':
-        complaint.status = 'dismissed'
-        complaint.save()
-        return JsonResponse({'success': True, 'message': 'Complaint dismissed successfully.'})
-    return JsonResponse({'success': False, 'error': 'Invalid request method.'})
+        try:
+            complaint = Complaint.objects.get(id=complaint_id)
+            complaint.status = 'dismissed'
+            complaint.save()
+            return JsonResponse({'success': True})
+        except Complaint.DoesNotExist:
+            return JsonResponse({'error': 'Complaint not found'}, status=404)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+@login_required
+def delete_post_complaint(request, complaint_id):
+    if request.method == 'POST':
+        try:
+            complaint = Complaint.objects.get(id=complaint_id)
+
+            # Delete the target content based on complaint type
+            if complaint.comment_target:
+                complaint.comment_target.delete()
+                target_type = "Comment"
+            elif complaint.topic_target:
+                complaint.topic_target.delete()
+                target_type = "Topic"
+            elif complaint.forum_target:
+                complaint.forum_target.delete()
+                target_type = "Forum"
+            else:
+                return JsonResponse({'error': 'No valid target to delete'}, status=400)
+
+            # Update complaint status
+            complaint.status = 'resolved'
+            complaint.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'{target_type} deleted successfully'
+            })
+
+        except Complaint.DoesNotExist:
+            return JsonResponse({'error': 'Complaint not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+@login_required
+def ban_user_complaint(request, complaint_id):
+    if request.method == 'POST':
+        try:
+            complaint = Complaint.objects.get(id=complaint_id)
+
+            # Determine which user to ban
+            target_user = None
+            if complaint.user_target:
+                target_user = complaint.user_target
+            elif complaint.comment_target:
+                target_user = complaint.comment_target.author
+            elif complaint.topic_target:
+                target_user = complaint.topic_target.author
+            elif complaint.forum_target:
+                target_user = complaint.forum_target.creator
+
+            if not target_user:
+                return JsonResponse({'error': 'No user found to ban'}, status=400)
+
+            duration = int(request.POST.get('duration', 0))
+            if duration <= 0:
+                return JsonResponse({'error': 'Invalid duration'}, status=400)
+
+            # Ban the user
+            user_profile = target_user.userprofile
+            user_profile.is_banned = True
+            user_profile.ban_duration = duration
+            user_profile.ban_end_date = now().date() + timedelta(days=30 * duration)
+            user_profile.save()
+
+            # Update complaint status
+            complaint.status = 'resolved'
+            complaint.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'User {target_user.username} banned for {duration} months.'
+            })
+
+        except Complaint.DoesNotExist:
+            return JsonResponse({'error': 'Complaint not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+@login_required
+def mark_complaint_reviewed(request, complaint_id):
+    if request.method == 'POST':
+        try:
+            complaint = Complaint.objects.get(id=complaint_id)
+            complaint.status = 'reviewed'
+            complaint.save()
+            return JsonResponse({'success': True})
+        except Complaint.DoesNotExist:
+            return JsonResponse({'error': 'Complaint not found'}, status=404)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
